@@ -9,15 +9,16 @@ import wave
 import numpy as np
 from basic import spectrum_tool
 
-DATA_DICT_DIR = basicData.DATA_ROOT+'/' + \
-    __file__[max(__file__.rfind('/'),0):__file__.rfind('.')]  # 数据字典的位置
-LOG_DIR = basicData.LOG_ROOT+'/' + \
-    __file__[max(__file__.rfind('/'),0):__file__.rfind('.')]  # 生成数据字典时的log位置
+# region define
+FILE_NAME = __file__[max(__file__.rfind('/'), 0):__file__.rfind('.')]
+DATA_DICT_DIR = basicData.DATA_ROOT+'/' + FILE_NAME  # 数据字典的位置
+LOG_DIR = basicData.LOG_ROOT+'/' + FILE_NAME  # 生成数据字典时的log位置
 LOG_NORM_MAX = 5
 LOG_NORM_MIN = -3
 NFFT = 512
 OVERLAP = 256
 FS = 16000
+# endregion
 
 
 def _get_waveData1__waveData2(file1, file2):
@@ -81,87 +82,83 @@ def _extract_feature_x_y(file1, file2):
                                                                axis=1)
 
 
-class __X(basicData.IndexableData):
+class _X(basicData.IndexableData):
   '''
-  basicData.IndexableData.__init__(self, rawdata,data_set_name):
+  basicData.IndexableData.__init__(self, rawdata,data_name,set_name):
     self.rawdata=rawdata
-    self.data_set_name=data_set_name
+    self.data_name=data_name
+    self.set_name=set_name
   '''
 
-  def __init__(self, rawdata):
-    self._size = -1
-    basicData.IndexableData.__init__(
-        self, rawdata, __file__[:__file__.rfind('.')], self.__len__())
+  def __init__(self, rawdata, data_name, set_name):
+    self.mixed_wav_list = scipy.io.loadmat(
+        DATA_DICT_DIR+"/"+set_name+"/mixed_wav_dir.mat")["mixed_wav_dir"]
+    basicData.IndexableData.__init__(self, rawdata, data_name, set_name)
 
   def __raw_getitem__(self, begin, end):
-    mixed_wav_list = scipy.io.loadmat(
-        DATA_DICT_DIR+"/train/mixed_wav_dir.mat")["mixed_wav_dir"][begin:end]
     x_data = []
     # print(mixed_wav_list)
-    for mix_wav in mixed_wav_list:
+    for mix_wav in self.mixed_wav_list[begin:end]:
       x_data.append(_extract_feature_x(mix_wav[0], mix_wav[1]))
     return x_data
 
   def __len__(self):
     if self._size == -1:
-      self._size = len(scipy.io.loadmat(
-          DATA_DICT_DIR+"/train/mixed_wav_dir.mat")["mixed_wav_dir"])
+      self._size = len(self.mixed_wav_list)
     return self._size
 
+  # TODO
   def shape(self):
     pass
 
 
-class __Y(basicData.IndexableData):
+class _Y(basicData.IndexableData):
   '''
-  basicData.IndexableData.__init__(self, rawdata,data_set_name):
+  basicData.IndexableData.__init__(self, rawdata,data_name,set_name):
     self.rawdata=rawdata
-    self.data_set_name=data_set_name
+    self.data_name=data_name
+    self.set_name=set_name
   '''
 
-  def __init__(self, rawdata):
-    self._size = -1
-    basicData.IndexableData.__init__(
-        self, rawdata, __file__[:__file__.rfind('.')], self.__len__())
+  def __init__(self, rawdata, data_name, set_name):
+    self.mixed_wav_list = scipy.io.loadmat(
+        DATA_DICT_DIR+"/"+set_name+"/mixed_wav_dir.mat")["mixed_wav_dir"]
+    basicData.IndexableData.__init__(self, rawdata, data_name, set_name)
 
   def __raw_getitem__(self, begin, end):
-    mixed_wav_list = scipy.io.loadmat(
-        DATA_DICT_DIR+"/train/mixed_wav_dir.mat")["mixed_wav_dir"][begin:end]
     y_data = []
-    for mix_wav in mixed_wav_list:
+    for mix_wav in self.mixed_wav_list[begin:end]:
       y_data.append(_extract_feature_y(mix_wav[0], mix_wav[1]))
     return y_data
 
   def __len__(self):
     if self._size == -1:
-      self._size = len(scipy.io.loadmat(
-          DATA_DICT_DIR+"/train/mixed_wav_dir.mat")["mixed_wav_dir"])
+      self._size = len(self.mixed_wav_list)
     return self._size
 
   def shape(self):
     pass
 
 
-class __X_Y(basicData.IndexableData):
+class _X_Y(basicData.IndexableData):
   '''
-  basicData.IndexableData.__init__(self, rawdata,data_set_name):
+  basicData.IndexableData.__init__(self, rawdata,data_name,set_name):
     self.rawdata=rawdata
-    self.data_set_name=data_set_name
+    self.data_name=data_name
+    self.set_name=set_name
   '''
 
-  def __init__(self, rawdata):
-    self._size = -1
-    basicData.IndexableData.__init__(
-        self, rawdata, __file__[:__file__.rfind('.')], self.__len__())
+  def __init__(self, rawdata, data_name, set_name):
+    self.mixed_wav_list = scipy.io.loadmat(
+        DATA_DICT_DIR+"/"+set_name+"/mixed_wav_dir.mat")["mixed_wav_dir"]
+    basicData.IndexableData.__init__(self, rawdata, data_name, set_name)
 
   def __raw_getitem__(self, begin, end):
     '''
     return [x,y]
     '''
-    mixed_wav_list = scipy.io.loadmat(
-        DATA_DICT_DIR+"/train/mixed_wav_dir.mat")["mixed_wav_dir"][begin:end]
     x_y_data = []
-    for mix_wav in mixed_wav_list:
+    for mix_wav in self.mixed_wav_list[begin:end]:
       x_y_data.append(_extract_feature_x_y(mix_wav[0], mix_wav[1]))
     shape_len = len(np.shape(x_y_data))
     tranind = [1, 0]
@@ -170,15 +167,14 @@ class __X_Y(basicData.IndexableData):
 
   def __len__(self):
     if self._size == -1:
-      self._size = len(scipy.io.loadmat(
-          DATA_DICT_DIR+"/train/mixed_wav_dir.mat")["mixed_wav_dir"])
+      self._size = len(self.mixed_wav_list)
     return self._size
 
   def shape(self):
     pass
 
 
-def __init_data__(rawdata):
+def _init_data__(rawdata):
   if os.path.exists(LOG_DIR):
     shutil.rmtree(LOG_DIR)
   os.makedirs(LOG_DIR)
@@ -255,19 +251,23 @@ def __init_data__(rawdata):
       '\nData preparation over time: '+str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
 
 
-class __TMP:
-  def __init__(self):
-    self.X = None
-    self.Y = None
-    self.X_Y = None
+class _SET:
+  def __init__(self, rawdata, setname):
+    self.X = _X(rawdata, FILE_NAME, setname)
+    self.Y = _Y(rawdata, FILE_NAME, setname)
+    self.X_Y = _X_Y(rawdata, FILE_NAME, setname)
 
 
+class _DATA:
+  def __init__(self, rawdata):
+    self.train = _SET(rawdata, 'train')
+    self.validation = _SET(rawdata, 'validation')
+    self.test_cc = _SET(rawdata, 'test_cc')
+
+
+# API
 def read_data_sets(rawdata):
 
-  __init_data__(rawdata)
-
-  tmp = __TMP()
-  tmp.X = __X(rawdata)
-  tmp.Y = __Y(rawdata)
-  tmp.X_Y = __X_Y(rawdata)
-  return tmp
+  _init_data__(rawdata)
+  data = _DATA(rawdata)
+  return data

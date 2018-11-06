@@ -3,16 +3,19 @@ import copy
 import shutil
 import os
 import traceback
+import scipy.io
 
 LOG_ROOT='_log/dataManager'
 DATA_ROOT='_data'
 class IndexableData(object):
   __metaclass__ = ABCMeta
 
-  def __init__(self, rawdata_dir, data_set_name,_size):
-    self._size = _size
+  def __init__(self, rawdata_dir, data_name,set_name):
+    self._size = -1
+    self._size = self.__len__()
     self.rawdata_dir = rawdata_dir
-    self.data_set_name=data_set_name
+    self._data_name=data_name
+    self._set_name=set_name
 
   @abstractmethod
   def __len__(self):
@@ -76,8 +79,11 @@ class IndexableData(object):
 
     pass
 
-  def rawdata_site(self):
+  def data_site(self):
     return self.rawdata_dir
 
-  def data_set_name(self):
-    return self.data_set_name
+  def data_name(self):
+    return self._data_name
+
+  def set_name(self):
+    return self.set_name
