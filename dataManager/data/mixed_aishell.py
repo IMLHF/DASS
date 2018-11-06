@@ -20,7 +20,7 @@ OVERLAP = 256
 FS = 16000
 
 
-def __get_waveData1__waveData2(file1, file2):
+def _get_waveData1__waveData2(file1, file2):
   f1 = wave.open(file1, 'rb')
   f2 = wave.open(file2, 'rb')
   waveData1 = np.fromstring(f1.readframes(f1.getnframes()),
@@ -38,14 +38,14 @@ def __get_waveData1__waveData2(file1, file2):
   return waveData1, waveData2
 
 
-def __mix_wav(waveData1, waveData2):
+def _mix_wav(waveData1, waveData2):
   # 混合语音
   mixedData = (waveData1+waveData2)/2
   mixedData = np.array(mixedData, dtype=np.int16)  # 必须指定是16位，因为写入音频时写入的是二进制数据
   return mixedData
 
 
-def __extract_norm_log_mag_spec(data):
+def _extract_norm_log_mag_spec(data):
   # 归一化的幅度谱对数
   mag_spec = spectrum_tool.magnitude_spectrum_np_fft(
       data, NFFT, OVERLAP)
@@ -58,29 +58,27 @@ def __extract_norm_log_mag_spec(data):
   return log_mag_spec
 
 
-def __extract_feature_x(file1, file2):
-  waveData1, waveData2 = __get_waveData1__waveData2(file1, file2)
-  mixedData = __mix_wav(waveData1, waveData2)
-  return __extract_norm_log_mag_spec(mixedData)
+def _extract_feature_x(file1, file2):
+  waveData1, waveData2 = _get_waveData1__waveData2(file1, file2)
+  mixedData = _mix_wav(waveData1, waveData2)
+  return _extract_norm_log_mag_spec(mixedData)
 
 
-def __extract_feature_y(file1, file2):
-  waveData1, waveData2 = __get_waveData1__waveData2(file1, file2)
-  clean1_log_mag_spec = __extract_norm_log_mag_spec(waveData1)
-  clean2_log_mag_spec = __extract_norm_log_mag_spec(waveData2)
-  print('mixed_aishell.py : ling 97 :', np.shape(
-      clean1_log_mag_spec), np.shape(clean2_log_mag_spec))
+def _extract_feature_y(file1, file2):
+  waveData1, waveData2 = _get_waveData1__waveData2(file1, file2)
+  clean1_log_mag_spec = _extract_norm_log_mag_spec(waveData1)
+  clean2_log_mag_spec = _extract_norm_log_mag_spec(waveData2)
   return np.concatenate([clean1_log_mag_spec, clean2_log_mag_spec], axis=1)
 
 
-def __extract_feature_x_y(file1, file2):
-  waveData1, waveData2 = __get_waveData1__waveData2(file1, file2)
-  mixedData = __mix_wav(waveData1, waveData2)
-  clean1_log_mag_spec = __extract_norm_log_mag_spec(waveData1)
-  clean2_log_mag_spec = __extract_norm_log_mag_spec(waveData2)
-  return __extract_norm_log_mag_spec(mixedData), np.concatenate([clean1_log_mag_spec,
-                                                                 clean2_log_mag_spec],
-                                                                axis=1)
+def _extract_feature_x_y(file1, file2):
+  waveData1, waveData2 = _get_waveData1__waveData2(file1, file2)
+  mixedData = _mix_wav(waveData1, waveData2)
+  clean1_log_mag_spec = _extract_norm_log_mag_spec(waveData1)
+  clean2_log_mag_spec = _extract_norm_log_mag_spec(waveData2)
+  return _extract_norm_log_mag_spec(mixedData), np.concatenate([clean1_log_mag_spec,
+                                                                clean2_log_mag_spec],
+                                                               axis=1)
 
 
 class __X(basicData.IndexableData):
@@ -91,9 +89,9 @@ class __X(basicData.IndexableData):
   '''
 
   def __init__(self, rawdata):
-    self._size=-1
+    self._size = -1
     basicData.IndexableData.__init__(
-        self, rawdata, __file__[:__file__.rfind('.')],self.size())
+        self, rawdata, __file__[:__file__.rfind('.')], self.__len__())
 
   def __raw_getitem__(self, begin, end):
     mixed_wav_list = scipy.io.loadmat(
@@ -101,10 +99,10 @@ class __X(basicData.IndexableData):
     x_data = []
     # print(mixed_wav_list)
     for mix_wav in mixed_wav_list:
-      x_data.append(__extract_feature_x(mix_wav[0], mix_wav[1]))
+      x_data.append(_extract_feature_x(mix_wav[0], mix_wav[1]))
     return x_data
 
-  def size(self):
+  def __len__(self):
     if self._size == -1:
       self._size = len(scipy.io.loadmat(
           DATA_DICT_DIR+"/train/mixed_wav_dir.mat")["mixed_wav_dir"])
@@ -122,19 +120,19 @@ class __Y(basicData.IndexableData):
   '''
 
   def __init__(self, rawdata):
-    self._size=-1
+    self._size = -1
     basicData.IndexableData.__init__(
-        self, rawdata, __file__[:__file__.rfind('.')],self.size())
+        self, rawdata, __file__[:__file__.rfind('.')], self.__len__())
 
   def __raw_getitem__(self, begin, end):
     mixed_wav_list = scipy.io.loadmat(
         DATA_DICT_DIR+"/train/mixed_wav_dir.mat")["mixed_wav_dir"][begin:end]
     y_data = []
     for mix_wav in mixed_wav_list:
-      y_data.append(__extract_feature_y(mix_wav[0], mix_wav[1]))
+      y_data.append(_extract_feature_y(mix_wav[0], mix_wav[1]))
     return y_data
 
-  def size(self):
+  def __len__(self):
     if self._size == -1:
       self._size = len(scipy.io.loadmat(
           DATA_DICT_DIR+"/train/mixed_wav_dir.mat")["mixed_wav_dir"])
@@ -152,9 +150,9 @@ class __X_Y(basicData.IndexableData):
   '''
 
   def __init__(self, rawdata):
-    self._size=-1
+    self._size = -1
     basicData.IndexableData.__init__(
-        self, rawdata, __file__[:__file__.rfind('.')],self.size())
+        self, rawdata, __file__[:__file__.rfind('.')], self.__len__())
 
   def __raw_getitem__(self, begin, end):
     '''
@@ -164,13 +162,13 @@ class __X_Y(basicData.IndexableData):
         DATA_DICT_DIR+"/train/mixed_wav_dir.mat")["mixed_wav_dir"][begin:end]
     x_y_data = []
     for mix_wav in mixed_wav_list:
-      x_y_data.append(__extract_feature_x_y(mix_wav[0], mix_wav[1]))
+      x_y_data.append(_extract_feature_x_y(mix_wav[0], mix_wav[1]))
     shape_len = len(np.shape(x_y_data))
     tranind = [1, 0]
     tranind.extend(list(range(shape_len))[2:])
     return np.transpose(x_y_data, tranind)
 
-  def size(self):
+  def __len__(self):
     if self._size == -1:
       self._size = len(scipy.io.loadmat(
           DATA_DICT_DIR+"/train/mixed_wav_dir.mat")["mixed_wav_dir"])
@@ -236,7 +234,7 @@ def __init_data__(rawdata):
 
   data_class_dir = ['train', 'validation', 'test_cc']
   for (clean_wav_list, j) in zip((clean_wav_list_train, clean_wav_list_validation, clean_wav_list_test_cc), range(3)):
-    log.print_save(data_class_dir[j]+" data preparing...")
+    log.print_save('\n'+data_class_dir[j]+" data preparing...")
     log.print_save('Current time: ' +
                    str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
     mixed_wav_list_file = open(
@@ -254,10 +252,10 @@ def __init_data__(rawdata):
     scipy.io.savemat(
         DATA_DICT_DIR+'/'+data_class_dir[j]+'/mixed_wav_dir.mat', {"mixed_wav_dir": mixed_wave_list})
   log.print_save(
-      'Over time: '+str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+      '\nData preparation over time: '+str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
 
 
-class TMP:
+class __TMP:
   def __init__(self):
     self.X = None
     self.Y = None
@@ -268,7 +266,7 @@ def read_data_sets(rawdata):
 
   __init_data__(rawdata)
 
-  tmp = TMP()
+  tmp = __TMP()
   tmp.X = __X(rawdata)
   tmp.Y = __Y(rawdata)
   tmp.X_Y = __X_Y(rawdata)

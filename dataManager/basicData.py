@@ -15,7 +15,7 @@ class IndexableData(object):
     self.data_set_name=data_set_name
 
   @abstractmethod
-  def size(self):
+  def __len__(self):
     pass
 
   # TODO
@@ -29,16 +29,16 @@ class IndexableData(object):
 
   def __getitem_by_slice__(self, index):
     start = 0 if index.start is None else index.start
-    stop = self.size() if index.stop is None else index.stop
+    stop = self.__len__() if index.stop is None else index.stop
     step = 1 if index.step is None else index.step
     if step != 1:
       traceback.print_exc()
       raise Exception('Data not support jump!')
     if start < 0:
-      start += self.size()
+      start += self.__len__()
     if stop < 0:
-      stop += self.size()
-    if start < 0 or stop < 0 or start >= self.size() or stop > self.size():
+      stop += self.__len__()
+    if start < 0 or stop < 0 or start >= self.__len__() or stop > self.__len__():
       traceback.print_exc()
       raise Exception('Index out of range!')
     if start >= stop:
@@ -47,8 +47,8 @@ class IndexableData(object):
 
   def __getitem_by_int__(self, index):
     if index < 0:
-      index += self.size()
-    if index < 0 or index >= self.size():
+      index += self.__len__()
+    if index < 0 or index >= self.__len__():
       traceback.print_exc()
       raise Exception('Index out of range!')
     return self.__raw_getitem__(index, index+1)
