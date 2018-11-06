@@ -10,9 +10,9 @@ import numpy as np
 from basic import spectrum_tool
 
 DATA_DICT_DIR = basicData.DATA_ROOT+'/' + \
-    __file__[:__file__.rfind('.')]  # 数据字典的位置
+    __file__[max(__file__.rfind('/'),0):__file__.rfind('.')]  # 数据字典的位置
 LOG_DIR = basicData.LOG_ROOT+'/' + \
-    __file__[:__file__.rfind('.')]  # 生成数据字典时的log位置
+    __file__[max(__file__.rfind('/'),0):__file__.rfind('.')]  # 生成数据字典时的log位置
 LOG_NORM_MAX = 5
 LOG_NORM_MIN = -3
 NFFT = 512
