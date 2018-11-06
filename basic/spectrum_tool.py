@@ -4,6 +4,17 @@ import scipy.signal
 
 
 def magnitude_spectrum_sci_stft(signal, fs, NFFT=512, overlap=256):
+  f, t, mag_frames = np.absolute(scipy.signal.stft(signal,
+                                                   fs=fs,  # signal的采样率
+                                                   window="hamming",
+                                                   nperseg=NFFT,
+                                                   noverlap=overlap,
+                                                   nfft=NFFT,
+                                                   ))
+  # pow_frames = (1.0 / NFFT) * ((mag_frames) ** 2)
+  return t, f, mag_frames.T
+
+def magnitude_spectrum_np_fft(signal, NFFT=512, overlap=256):
   segsize = NFFT  # 每帧长度
   inc = segsize-overlap
   signal_length = len(signal)
@@ -16,12 +27,9 @@ def magnitude_spectrum_sci_stft(signal, fs, NFFT=512, overlap=256):
   indices = np.array(indices, dtype=np.int32)  # 展开overlap的帧矩阵
   frames = pad_signal[indices]  # 得到展开后帧信号矩阵
   frames *= np.hamming(segsize)  # 汉明窗
-  f, t, mag_frames = np.absolute(scipy.signal.stft(signal,
-                                                   fs=fs,  # signal的采样率
-                                                   window="hamming",
-                                                   nperseg=NFFT,
-                                                   noverlap=overlap,
-                                                   nfft=NFFT,
-                                                   ))
+  mag_frames = np.absolute(np.fft.rfft(frames,
+                                       NFFT,
+                                       axis=1,
+                                       ))
   # pow_frames = (1.0 / NFFT) * ((mag_frames) ** 2)
-  return t, f, mag_frames.T
+  return mag_frames
