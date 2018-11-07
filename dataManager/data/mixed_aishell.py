@@ -1,7 +1,7 @@
+from dataManager.basicData import DATABASE, logger
 from dataManager import basicData
 import os
 import shutil
-from log.log import LOG
 import datetime
 import scipy
 import scipy.io
@@ -9,10 +9,9 @@ import wave
 import numpy as np
 from basic import spectrum_tool
 
+
 # region define
-FILE_NAME = __file__[max(__file__.rfind('/'), 0):__file__.rfind('.')]
-DATA_DICT_DIR = basicData.DATA_ROOT+'/' + FILE_NAME  # 数据字典的位置
-LOG_DIR = basicData.LOG_ROOT+'/' + FILE_NAME  # 生成数据字典时的log位置
+FILE_NAME = __file__[max(__file__.rfind('/')+1, 0):__file__.rfind('.')]
 LOG_NORM_MAX = 5
 LOG_NORM_MIN = -3
 NFFT = 512
@@ -59,21 +58,21 @@ def _extract_norm_log_mag_spec(data):
   return log_mag_spec
 
 
-def _extract_feature_x(file1, file2):
-  waveData1, waveData2 = _get_waveData1__waveData2(file1, file2)
+def _extract_feature_x(file_pair):
+  waveData1, waveData2 = _get_waveData1__waveData2(file_pair[0], file_pair[1])
   mixedData = _mix_wav(waveData1, waveData2)
   return _extract_norm_log_mag_spec(mixedData)
 
 
-def _extract_feature_y(file1, file2):
-  waveData1, waveData2 = _get_waveData1__waveData2(file1, file2)
+def _extract_feature_y(file_pair):
+  waveData1, waveData2 = _get_waveData1__waveData2(file_pair[0], file_pair[1])
   clean1_log_mag_spec = _extract_norm_log_mag_spec(waveData1)
   clean2_log_mag_spec = _extract_norm_log_mag_spec(waveData2)
   return np.concatenate([clean1_log_mag_spec, clean2_log_mag_spec], axis=1)
 
 
-def _extract_feature_x_y(file1, file2):
-  waveData1, waveData2 = _get_waveData1__waveData2(file1, file2)
+def _extract_feature_x_y(file_pair):
+  waveData1, waveData2 = _get_waveData1__waveData2(file_pair[0], file_pair[1])
   mixedData = _mix_wav(waveData1, waveData2)
   clean1_log_mag_spec = _extract_norm_log_mag_spec(waveData1)
   clean2_log_mag_spec = _extract_norm_log_mag_spec(waveData2)
@@ -82,114 +81,23 @@ def _extract_feature_x_y(file1, file2):
                                                                axis=1)
 
 
-class _X(basicData.IndexableData):
-  '''
-  basicData.IndexableData.__init__(self, rawdata,data_name,set_name):
-    self.rawdata=rawdata
-    self.data_name=data_name
-    self.set_name=set_name
-  '''
-
-  def __init__(self, rawdata, data_name, set_name):
-    self.mixed_wav_list = scipy.io.loadmat(
-        DATA_DICT_DIR+"/"+set_name+"/mixed_wav_dir.mat")["mixed_wav_dir"]
-    basicData.IndexableData.__init__(self, rawdata, data_name, set_name)
-
-  def __raw_getitem__(self, begin, end):
-    x_data = []
-    # print(mixed_wav_list)
-    for mix_wav in self.mixed_wav_list[begin:end]:
-      x_data.append(_extract_feature_x(mix_wav[0], mix_wav[1]))
-    return x_data
-
-  def __len__(self):
-    if self._size == -1:
-      self._size = len(self.mixed_wav_list)
-    return self._size
-
-  # TODO
-  def shape(self):
-    pass
-
-
-class _Y(basicData.IndexableData):
-  '''
-  basicData.IndexableData.__init__(self, rawdata,data_name,set_name):
-    self.rawdata=rawdata
-    self.data_name=data_name
-    self.set_name=set_name
-  '''
-
-  def __init__(self, rawdata, data_name, set_name):
-    self.mixed_wav_list = scipy.io.loadmat(
-        DATA_DICT_DIR+"/"+set_name+"/mixed_wav_dir.mat")["mixed_wav_dir"]
-    basicData.IndexableData.__init__(self, rawdata, data_name, set_name)
-
-  def __raw_getitem__(self, begin, end):
-    y_data = []
-    for mix_wav in self.mixed_wav_list[begin:end]:
-      y_data.append(_extract_feature_y(mix_wav[0], mix_wav[1]))
-    return y_data
-
-  def __len__(self):
-    if self._size == -1:
-      self._size = len(self.mixed_wav_list)
-    return self._size
-
-  def shape(self):
-    pass
-
-
-class _X_Y(basicData.IndexableData):
-  '''
-  basicData.IndexableData.__init__(self, rawdata,data_name,set_name):
-    self.rawdata=rawdata
-    self.data_name=data_name
-    self.set_name=set_name
-  '''
-
-  def __init__(self, rawdata, data_name, set_name):
-    self.mixed_wav_list = scipy.io.loadmat(
-        DATA_DICT_DIR+"/"+set_name+"/mixed_wav_dir.mat")["mixed_wav_dir"]
-    basicData.IndexableData.__init__(self, rawdata, data_name, set_name)
-
-  def __raw_getitem__(self, begin, end):
-    '''
-    return [x,y]
-    '''
-    x_y_data = []
-    for mix_wav in self.mixed_wav_list[begin:end]:
-      x_y_data.append(_extract_feature_x_y(mix_wav[0], mix_wav[1]))
-    shape_len = len(np.shape(x_y_data))
-    tranind = [1, 0]
-    tranind.extend(list(range(shape_len))[2:])
-    return np.transpose(x_y_data, tranind)
-
-  def __len__(self):
-    if self._size == -1:
-      self._size = len(self.mixed_wav_list)
-    return self._size
-
-  def shape(self):
-    pass
-
-
-def _init_data__(rawdata):
+def _init_data__(rawdata, data_dict_dir):
+  logger.set_file(FILE_NAME+'/init_data.log')
+  LOG_DIR='/'.join(logger.file_dir().split('/')[:-1])
   if os.path.exists(LOG_DIR):
     shutil.rmtree(LOG_DIR)
   os.makedirs(LOG_DIR)
-  if os.path.exists(DATA_DICT_DIR):
-    shutil.rmtree(DATA_DICT_DIR)
-  os.makedirs(DATA_DICT_DIR)
-  log = LOG(LOG_DIR+'/init_data.log')
+  if os.path.exists(data_dict_dir):
+    shutil.rmtree(data_dict_dir)
+  os.makedirs(data_dict_dir)
   clean_wav_speaker_set_dir = rawdata
-  os.makedirs(DATA_DICT_DIR+'/train')
-  os.makedirs(DATA_DICT_DIR+'/validation')
-  os.makedirs(DATA_DICT_DIR+'/test_cc')
-  cwl_train_file = open(DATA_DICT_DIR+'/train/clean_wav_dir.list', 'a+')
+  os.makedirs(data_dict_dir+'/train')
+  os.makedirs(data_dict_dir+'/validation')
+  os.makedirs(data_dict_dir+'/test_cc')
+  cwl_train_file = open(data_dict_dir+'/train/clean_wav_dir.list', 'a+')
   cwl_validation_file = open(
-      DATA_DICT_DIR+'/validation/clean_wav_dir.list', 'a+')
-  cwl_test_cc_file = open(DATA_DICT_DIR+'/test_cc/clean_wav_dir.list', 'a+')
+      data_dict_dir+'/validation/clean_wav_dir.list', 'a+')
+  cwl_test_cc_file = open(data_dict_dir+'/test_cc/clean_wav_dir.list', 'a+')
   clean_wav_list_train = []
   clean_wav_list_validation = []
   clean_wav_list_test_cc = []
@@ -216,25 +124,25 @@ def _init_data__(rawdata):
   cwl_train_file.close()
   cwl_validation_file.close()
   cwl_test_cc_file.close()
-  log.print_save('train clean: '+str(len(clean_wav_list_train)))
-  log.print_save('validation clean: '+str(len(clean_wav_list_validation)))
-  log.print_save('test_cc clean: '+str(len(clean_wav_list_test_cc)))
-  log.print_save('train mixed about: '+str(len(clean_wav_list_train)
-                                           * len(clean_wav_list_train)))
-  log.print_save('validation mixed about: '+str(len(clean_wav_list_validation)
-                                                * len(clean_wav_list_validation)))
-  log.print_save('test_cc mixed about: '+str(len(clean_wav_list_test_cc)
-                                             * len(clean_wav_list_test_cc)))
-  log.print_save('All about: '+str(len(clean_wav_list_train)*len(clean_wav_list_train)+len(clean_wav_list_validation)
-                                   * len(clean_wav_list_validation)+len(clean_wav_list_test_cc)*len(clean_wav_list_test_cc)))
+  logger.print_save('train clean: '+str(len(clean_wav_list_train)))
+  logger.print_save('validation clean: '+str(len(clean_wav_list_validation)))
+  logger.print_save('test_cc clean: '+str(len(clean_wav_list_test_cc)))
+  logger.print_save('train mixed about: '+str(len(clean_wav_list_train)
+                                              * len(clean_wav_list_train)))
+  logger.print_save('validation mixed about: '+str(len(clean_wav_list_validation)
+                                                   * len(clean_wav_list_validation)))
+  logger.print_save('test_cc mixed about: '+str(len(clean_wav_list_test_cc)
+                                                * len(clean_wav_list_test_cc)))
+  logger.print_save('All about: '+str(len(clean_wav_list_train)*len(clean_wav_list_train)+len(clean_wav_list_validation)
+                                      * len(clean_wav_list_validation)+len(clean_wav_list_test_cc)*len(clean_wav_list_test_cc)))
 
   data_class_dir = ['train', 'validation', 'test_cc']
   for (clean_wav_list, j) in zip((clean_wav_list_train, clean_wav_list_validation, clean_wav_list_test_cc), range(3)):
-    log.print_save('\n'+data_class_dir[j]+" data preparing...")
-    log.print_save('Current time: ' +
-                   str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    logger.print_save('\n'+data_class_dir[j]+" data preparing...")
+    logger.print_save('Current time: ' +
+                      str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
     mixed_wav_list_file = open(
-        DATA_DICT_DIR+'/'+data_class_dir[j]+'/mixed_wav_dir.list', 'a+')
+        data_dict_dir+'/'+data_class_dir[j]+'/mixed_wav_dir.list', 'a+')
     mixed_wave_list = []
     for utt1_dir in clean_wav_list:
       for utt2_dir in clean_wav_list:
@@ -246,28 +154,26 @@ def _init_data__(rawdata):
         mixed_wave_list.append([utt1_dir, utt2_dir])
     mixed_wav_list_file.close()
     scipy.io.savemat(
-        DATA_DICT_DIR+'/'+data_class_dir[j]+'/mixed_wav_dir.mat', {"mixed_wav_dir": mixed_wave_list})
-  log.print_save(
+        data_dict_dir+'/'+data_class_dir[j]+'/mixed_wav_dir.mat', {"mixed_wav_dir": mixed_wave_list})
+  logger.print_save(
       '\nData preparation over time: '+str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-
-
-class _SET:
-  def __init__(self, rawdata, setname):
-    self.X = _X(rawdata, FILE_NAME, setname)
-    self.Y = _Y(rawdata, FILE_NAME, setname)
-    self.X_Y = _X_Y(rawdata, FILE_NAME, setname)
-
-
-class _DATA:
-  def __init__(self, rawdata):
-    self.train = _SET(rawdata, 'train')
-    self.validation = _SET(rawdata, 'validation')
-    self.test_cc = _SET(rawdata, 'test_cc')
 
 
 # API
 def read_data_sets(rawdata):
 
-  _init_data__(rawdata)
-  data = _DATA(rawdata)
-  return data
+  DATA_DICT_DIR = '_data/' + FILE_NAME  # 数据字典的位置
+  _init_data__(rawdata, DATA_DICT_DIR)
+
+  # 数据集字典 {集合名称:集合索引}
+  set_dict = {
+      "train": scipy.io.loadmat(DATA_DICT_DIR+"/train/mixed_wav_dir.mat")["mixed_wav_dir"],
+      "validation": scipy.io.loadmat(DATA_DICT_DIR+"/validation/mixed_wav_dir.mat")["mixed_wav_dir"],
+      "test_cc": scipy.io.loadmat(DATA_DICT_DIR+"/test_cc/mixed_wav_dir.mat")["mixed_wav_dir"],
+  }
+  # 集合元素获取器[x,y,x_y]
+  itemgetor_list = [_extract_feature_x,
+                    _extract_feature_y,
+                    _extract_feature_x_y]
+  return DATABASE(set_dict, itemgetor_list)
+
