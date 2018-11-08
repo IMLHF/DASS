@@ -1,4 +1,4 @@
-from dataManager.basicData import DATABASE, logger
+from dataManager.basicData import DATABASE
 from dataManager import basicData
 import os
 import shutil
@@ -7,7 +7,7 @@ import scipy
 import scipy.io
 import wave
 import numpy as np
-from basic import spectrum_tool
+from utils import spectrum_tool
 
 
 # region define
@@ -58,32 +58,50 @@ def _extract_norm_log_mag_spec(data):
   return log_mag_spec
 
 
-def _extract_feature_x(file_pair):
-  waveData1, waveData2 = _get_waveData1__waveData2(file_pair[0], file_pair[1])
-  mixedData = _mix_wav(waveData1, waveData2)
-  return _extract_norm_log_mag_spec(mixedData)
+def _extract_feature_x(data_index_list):
+  data = []
+  for data_index in data_index_list:
+    waveData1, waveData2 = _get_waveData1__waveData2(
+        data_index[0], data_index[1])
+    mixedData = _mix_wav(waveData1, waveData2)
+    data.append(_extract_norm_log_mag_spec(mixedData))
+  return data
 
 
-def _extract_feature_y(file_pair):
-  waveData1, waveData2 = _get_waveData1__waveData2(file_pair[0], file_pair[1])
-  clean1_log_mag_spec = _extract_norm_log_mag_spec(waveData1)
-  clean2_log_mag_spec = _extract_norm_log_mag_spec(waveData2)
-  return np.concatenate([clean1_log_mag_spec, clean2_log_mag_spec], axis=1)
+def _extract_feature_y(data_index_list):
+  data = []
+  for data_index in data_index_list:
+    waveData1, waveData2 = _get_waveData1__waveData2(
+        data_index[0], data_index[1])
+    clean1_log_mag_spec = _extract_norm_log_mag_spec(waveData1)
+    clean2_log_mag_spec = _extract_norm_log_mag_spec(waveData2)
+    data.append(np.concatenate(
+        [clean1_log_mag_spec, clean2_log_mag_spec], axis=1))
+  return data
 
 
-def _extract_feature_x_y(file_pair):
-  waveData1, waveData2 = _get_waveData1__waveData2(file_pair[0], file_pair[1])
-  mixedData = _mix_wav(waveData1, waveData2)
-  clean1_log_mag_spec = _extract_norm_log_mag_spec(waveData1)
-  clean2_log_mag_spec = _extract_norm_log_mag_spec(waveData2)
-  return _extract_norm_log_mag_spec(mixedData), np.concatenate([clean1_log_mag_spec,
-                                                                clean2_log_mag_spec],
-                                                               axis=1)
+def _extract_feature_x_y(data_index_list):
+  datax = []
+  datay = []
+  for data_index in data_index_list:
+    waveData1, waveData2 = _get_waveData1__waveData2(
+        data_index[0], data_index[1])
+    mixedData = _mix_wav(waveData1, waveData2)
+    clean1_log_mag_spec = _extract_norm_log_mag_spec(waveData1)
+    clean2_log_mag_spec = _extract_norm_log_mag_spec(waveData2)
+    # print(data_index_list)
+    datax.append(_extract_norm_log_mag_spec(mixedData))
+    datay.append(np.concatenate([clean1_log_mag_spec,
+                                 clean2_log_mag_spec],
+                                axis=1))
+    # print(np.shape(datax))
+    # print(np.shape(datay))
+  return [np.array(datax), np.array(datay)]
 
 
-def _init_data__(rawdata, data_dict_dir):
+def _init_data__(rawdata, data_dict_dir, logger):
   logger.set_file(FILE_NAME+'/init_data.log')
-  LOG_DIR='/'.join(logger.file_dir().split('/')[:-1])
+  LOG_DIR = '/'.join(logger.file_dir().split('/')[:-1])
   if os.path.exists(LOG_DIR):
     shutil.rmtree(LOG_DIR)
   os.makedirs(LOG_DIR)
@@ -163,7 +181,7 @@ def _init_data__(rawdata, data_dict_dir):
 def read_data_sets(rawdata):
 
   DATA_DICT_DIR = '_data/' + FILE_NAME  # 数据字典的位置
-  _init_data__(rawdata, DATA_DICT_DIR)
+  _init_data__(rawdata, DATA_DICT_DIR, DATABASE.get_logger())
 
   # 数据集字典 {集合名称:集合索引}
   set_dict = {
@@ -175,5 +193,6 @@ def read_data_sets(rawdata):
   itemgetor_list = [_extract_feature_x,
                     _extract_feature_y,
                     _extract_feature_x_y]
-  return DATABASE(set_dict, itemgetor_list)
-
+  data = DATABASE(set_dict, itemgetor_list)
+  data.train
+  return data

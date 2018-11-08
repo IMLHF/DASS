@@ -1,4 +1,5 @@
 import traceback
+import os
 
 
 class LOGGER(object):
@@ -6,8 +7,12 @@ class LOGGER(object):
     self.root = root
     self.file = None
 
-  def set_file(self, file):
+  def set_file(self, file=""):
     self.file = file
+    dir_=self.file_dir()
+    dir_=dir_[:dir_.rfind('/')]
+    if not os.path.exists(dir_):
+      os.makedirs(dir_)
 
   def file_dir(self):
     return self.root+'/'+self.file

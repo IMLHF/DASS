@@ -6,7 +6,6 @@ import traceback
 import scipy.io
 from logger.log import LOGGER
 
-LOG_ROOT = '_log/dataManager'
 
 
 class IndexableData(object):
@@ -14,11 +13,11 @@ class IndexableData(object):
 
   @abstractmethod
   def __len__(self):
-    pass
+    raise NotImplementedError
 
   @abstractmethod
   def __raw_getitem__(self, begin, end):
-    pass
+    raise NotImplementedError
 
   def __getitem_by_slice__(self, index):
     start = 0 if index.start is None else index.start
@@ -79,26 +78,38 @@ class Data(IndexableData):
     self.itemgetor_by_data_index = itemgetor_by_data_index
 
   def __raw_getitem__(self, begin, end):
-    data = []
-    for data_index in self.data_index_list[begin:end]:
-      data.append(self.itemgetor_by_data_index(data_index))
-    return data
+    return self.itemgetor_by_data_index(self.data_index_list[begin:end])
 
   def __len__(self):
     return len(self.data_index_list)
 
 
 class SET:
-  def __init__(self, data_index_list, itemgetor_list):
+  def __init__(self, data_index_list=None, itemgetor_list=None):
+    if data_index_list is None:
+      return
     self.X = Data(data_index_list, itemgetor_list[0])
     self.Y = Data(data_index_list, itemgetor_list[1])
     self.X_Y = Data(data_index_list, itemgetor_list[2])
 
+
 # region API
-logger=copy.deepcopy(LOGGER(LOG_ROOT))
+
+
 class DATABASE:
+
   def __init__(self, set_dict, itemgetor_list):
+    self.train = SET()
+    self.validation = SET()
+    self.test_cc = SET()
+    self.test_oc = SET()
+    self.develop = SET()
     set_name_list = set_dict.keys()
     for set_name in set_name_list:
       self.__setattr__(set_name, SET(set_dict[set_name], itemgetor_list))
+
+  @staticmethod
+  def get_logger():
+    LOG_ROOT = '_log/dataManager'
+    return LOGGER(LOG_ROOT)
 # endregion
