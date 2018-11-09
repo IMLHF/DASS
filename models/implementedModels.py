@@ -1,34 +1,43 @@
-from models.basicModel import FastBasicModel
+from models.basicModel import SimpleBasicModel
 import tensorflow as tf
 import numpy as np
 from utils.tf_tool import sigmoid_tdnn_layer
 from utils import tf_tool
 
 
-class DEEP_SPEECH_SEPARTION(FastBasicModel):
+class DEEP_SPEECH_SEPARTION(SimpleBasicModel):
   """
-  传统深度语音分离方法，使用卷积网络实现
+  description
+  ----------
+  speech separation, implement using CNN.
+  alternative to use losses.loss.PIT_MSE/losses.loss.MSE as loss function.
+  ----------
+  Parameters
+  ----------
+  layers_size : ``list`` or ``np.ndarray``
+    the number of units of CNN layers.
+  time_width : ``list`` or ``np.ndarray``
+    delay time of CNN layers.
+  loss_fun : ``losses.loss.*`` function
+    loss function, please use function in package {losses.loss} .
+  learning_rate : ``float``
+    learning rate.
+  gpu_list : ``list``
+    list of gpu to use, e.g.[0,1,3] to use '/gpu:0', '/gpu:1' and '/gpu:3'
+  name : ``str``
+    model name. log will be built by the name, don't include special numeric.
   """
 
   def __init__(self, layers_size, times_width, loss_fun, learning_rate, gpu_list, name):
-    """
-    Parameters
-    ----------
-    raw_frames : ``list`` or ``np.ndarray``
-        the feature array of a dataset.
-    raw_labels : ``list`` or ``np.ndarray``
-        the label array of a dataset.
-    config : ``config`` class
-        The config of your model, we only need use its 'batch_size' member.
-    """
-    self.gpu_list=gpu_list
+
+    self.gpu_list = gpu_list
     self.loss_function = loss_fun
     self.learning_rat = learning_rate
     self.layers_size = layers_size
     self.times_width = times_width
     self.debug = None
-    self.debug = []#TODO rm
-    FastBasicModel.__init__(self, name)
+    self.debug = []  # TODO rm
+    SimpleBasicModel.__init__(self, name)
 
   def _build_graph(self):
     optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rat)
@@ -41,8 +50,8 @@ class DEEP_SPEECH_SEPARTION(FastBasicModel):
     n_x = tf.shape(x_in)[0]
     # self.debug.append(tf.shape(x_in))  # TODO rm
     dataslice = tf_tool.get_gpu_batch_size_list(n_x, n_gpu)
-    x_in_list=tf.split(x_in,dataslice,axis=0)
-    y_reference_list=tf.split(y_reference,dataslice,axis=0)
+    x_in_list = tf.split(x_in, dataslice, axis=0)
+    y_reference_list = tf.split(y_reference, dataslice, axis=0)
     with tf.variable_scope('gpu_variables', reuse=tf.AUTO_REUSE):
       for i_gpu, gpu_id in enumerate(self.gpu_list):
         with tf.device('/gpu:%d' % gpu_id):

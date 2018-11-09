@@ -6,7 +6,7 @@ import datetime
 import numpy as np
 
 
-class FastBasicModel(object):
+class SimpleBasicModel(object):
   __metaclass__ = ABCMeta
 
   def __init__(self, name):
