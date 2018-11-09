@@ -43,8 +43,8 @@ def data_manager_test():
 def concat_test():
   v1 = tf.get_variable('v1', shape=[2, 12], initializer=tf.ones_initializer(
       dtype=tf.float32), dtype=tf.float32)
-  v2 = tf.get_variable('v2', shape=[5, 1], initializer=tf.random_uniform_initializer(
-      maxval=-1., minval=1., seed=0), dtype=tf.float32)
+  # v2 = tf.get_variable('v2', shape=[5, 1], initializer=tf.random_uniform_initializer(
+  #     maxval=-1., minval=1., seed=0), dtype=tf.float32)
   # 向当前计算图中添加张量集合
   # tf.add_to_collection('v', v1)
   # tf.add_to_collection('v', v2)
@@ -72,14 +72,14 @@ def run():
                                     learning_rate=0.01,
                                     gpu_list=[0,1],
                                     name='PIT')
-  pit_model.train(data_mixed.train.X_Y, batch_size=4,epoch=10)
+  pit_model.train(data_mixed.train.X_Y, batch_size=32,epoch=10)
   conv_model = DEEP_SPEECH_SEPARTION(layers_size=[257, 2048, 2048, 2048, 514],
                                      times_width=[7, 1, 1, 1],
                                      loss_fun=loss.MSE,
                                      learning_rate=0.01,
                                      gpu_list=[0,1],
                                      name='CONV')
-  conv_model.train(data_mixed.train.X_Y, batch_size=2,epoch=10)
+  conv_model.train(data_mixed.train.X_Y, batch_size=32,epoch=10)
 
 
 if __name__ == "__main__":

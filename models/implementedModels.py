@@ -77,5 +77,5 @@ class DEEP_SPEECH_SEPARTION(FastBasicModel):
         self.train_nid: train_op,
     }
 
-  def test(self):
-    print("000 over test")
+  def save_model(self):
+    print("000 ignore save")

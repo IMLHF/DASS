@@ -26,14 +26,18 @@ class FastBasicModel(object):
     logger = self.get_logger()
     logger.rmdir(name)
 
-  # def __del__(self):
-  #   self.session.close()
+  def __del__(self):
+    self.session.close()
 
   @abstractmethod
   def _build_graph(self):
     '''
     return graph_node_dict
     '''
+    raise NotImplementedError
+
+  @abstractmethod
+  def save_model(self):
     raise NotImplementedError
 
   def train(self, data, batch_size, epoch, verbose=True):
@@ -65,31 +69,29 @@ class FastBasicModel(object):
         batch_cost_time = time.time()-batch_begin_time
         if verbose:
           loggerbatch.print_save(self.name+" Training : Epoch"+' %04d' %
-                                 (i_epoch+1)+", batch %04d Lost " % (i+1) + '%2.9lf' % loss_t+' Cost time : ' + str(int(batch_cost_time))+'S')
+                                 (i_epoch+1)+", batch %04d Lost " % (i+1) + '%02.9lf' % loss_t+' Cost time : ' + '%02.2lf' % batch_cost_time+'S')
       duration = time.time() - start_time
       if verbose:
         logger.print_save(self.name+" Training : Epoch"+' %04d' %
-                          (i_epoch+1)+" Lost "+'%2.9lf' % avg_lost+' Cost time : ' + str(duration))
+                          (i_epoch+1)+" Lost "+'%02.9lf' % avg_lost+' Cost time : ' + '%02.2lf' % duration+'S')
       else:
         logger.save(self.name+" Training : Epoch"+' %04d' %
-                    (i_epoch+1)+" Lost "+'%2.9lf' % avg_lost+' Cost time : ' + str(duration))
+                    (i_epoch+1)+" Lost "+'%02.9lf' % avg_lost+' Cost time : ' + '%02.2lf' % duration+'S')
     train_cost_time = time.time() - train_start_time
     if verbose:
       logger.print_save(
-          "\n"+self.name+' Optimizer Finished. Cost time : ' + str(train_cost_time))
+          "\n"+self.name+' Optimizer Finished. Cost time : ' + '%02.2lf' % train_cost_time+'S')
     else:
       logger.save("\n"+self.name +
-                  ' Optimizer Finished. Cost time : ' + str(train_cost_time))
+                  ' Optimizer Finished. Cost time : ' + '%02.2lf' % train_cost_time+'S')
     logger.print_save(
         'Trainning complete time: '+str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-
-  @abstractmethod
-  def test(self, x, y):
-    raise NotImplementedError
 
   def test_MSE(self, x, y):
     logger = self.get_logger()
     logger.set_file(self.name+'/test.log')
+    y_out = self.predict(x)
+    return np.mean((y-y_out)**2)
 
   def predict(self, x):
     # logger = self.get_logger()
