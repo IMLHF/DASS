@@ -17,6 +17,7 @@ LOG_NORM_MIN = -3
 NFFT = 512
 OVERLAP = 256
 FS = 16000
+LEN_WAWE_PAD_TO = 160000
 # endregion
 
 
@@ -29,13 +30,17 @@ def _get_waveData1__waveData2(file1, file2):
                             dtype=np.int16)
   f1.close()
   f2.close()
-  if len(waveData1) < len(waveData2):
-    waveData1, waveData2 = waveData2, waveData1
-  # print(np.shape(waveData1))
-  gap = len(waveData1)-len(waveData2)
-  waveData2 = np.concatenate(
-      (waveData2, np.random.randint(-400, 400, size=(gap,))))
-  return waveData1, waveData2
+  while len(waveData1)<LEN_WAWE_PAD_TO:
+    waveData1=np.tile(waveData1,2)
+  while len(waveData2)<LEN_WAWE_PAD_TO:
+    waveData2=np.tile(waveData2,2)
+  # if len(waveData1) < len(waveData2):
+  #   waveData1, waveData2 = waveData2, waveData1
+  # # print(np.shape(waveData1))
+  # gap = len(waveData1)-len(waveData2)
+  # waveData2 = np.concatenate(
+  #     (waveData2, np.random.randint(-400, 400, size=(gap,))))
+  return waveData1[:LEN_WAWE_PAD_TO], waveData2[:LEN_WAWE_PAD_TO]
 
 
 def _mix_wav(waveData1, waveData2):
@@ -54,7 +59,10 @@ def _extract_norm_log_mag_spec(data):
   log_mag_spec[log_mag_spec > LOG_NORM_MAX] = LOG_NORM_MAX
   log_mag_spec[log_mag_spec < LOG_NORM_MIN] = LOG_NORM_MIN
   log_mag_spec += np.abs(LOG_NORM_MIN)
-  log_mag_spec /= LOG_NORM_MAX
+  log_mag_spec /= (np.abs(LOG_NORM_MIN)+LOG_NORM_MAX)
+  # mean=np.mean(log_mag_spec)
+  # var=np.var(log_mag_spec)
+  # log_mag_spec=(log_mag_spec-mean)/var
   return log_mag_spec
 
 

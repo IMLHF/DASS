@@ -1,8 +1,8 @@
 from dataManager.data import mixed_aishell
-from models.implementedModels import CONV_SPEECH_SEPARTION
+from models.implementedModels import DEEP_SPEECH_SEPARTION
 import tensorflow as tf
 import numpy as np
-from losses.loss import PIT_MSE
+from losses import loss
 from abc import abstractmethod, ABCMeta
 
 
@@ -59,26 +59,38 @@ def concat_test():
     # print(np.shape(sess.run(tf.concat(tf.get_collection('v'),0))))
     a, b = tf.split(v1, 2, axis=1)
     print(np.shape(sess.run(a)))
-    print(sess.run(PIT_MSE(y1, y2)))
+    print(sess.run(loss.PIT_MSE(y1, y2)))
 
 
 def run():
   data_dir = '/home/student/work/pit_test/data_small'
   # data_dir = '/mnt/d/tf_recipe/PIT_SYS/utterance_test/speaker_set'
   data_mixed = mixed_aishell.read_data_sets(data_dir)
-  model = CONV_SPEECH_SEPARTION(layers_size=[257, 2048, 2048, 2048, 514],
-                                times_width=[7, 1, 1, 1],
-                                loss_fun=PIT_MSE,
-                                learning_rate=0.01)
-  model.train(data_mixed.train.X_Y, 1, 10)
-
-
+  pit_model = DEEP_SPEECH_SEPARTION(layers_size=[257, 2048, 2048, 2048, 514],
+                                    times_width=[7, 1, 1, 1],
+                                    loss_fun=loss.PIT_MSE,
+                                    learning_rate=0.01,
+                                    gpu_list=[0,1],
+                                    name='PIT')
+  pit_model.train(data_mixed.train.X_Y, batch_size=4,epoch=10)
+  conv_model = DEEP_SPEECH_SEPARTION(layers_size=[257, 2048, 2048, 2048, 514],
+                                     times_width=[7, 1, 1, 1],
+                                     loss_fun=loss.MSE,
+                                     learning_rate=0.01,
+                                     gpu_list=[0,1],
+                                     name='CONV')
+  conv_model.train(data_mixed.train.X_Y, batch_size=2,epoch=10)
 
 
 if __name__ == "__main__":
   # data_manager_test()
   # concat_test()
   run()
+  # c=[[[1,2,3],[1,2,3]]]
+  # print(np.shape(c))
+  # print(np.reshape(c,[2,3]))
+  # mean = np.var(c)
+  # print(mean)
   # print(__file__)
   # b = B()
   # print(b.nameb)

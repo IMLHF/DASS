@@ -20,9 +20,11 @@ class FastBasicModel(object):
     self.predict_nid = 3
     self.loss_nid = 4
     self.train_nid = 5
-    # endregion
+    # endregions
     self.graph_node_dict = self._build_graph()
     self.session.run(tf.global_variables_initializer())
+    logger = self.get_logger()
+    logger.rmdir(name)
 
   # def __del__(self):
   #   self.session.close()
@@ -37,11 +39,11 @@ class FastBasicModel(object):
   def train(self, data, batch_size, epoch, verbose=True):
     logger = self.get_logger()
     logger.set_file(self.name+'/train.log')
-    loggertmp=self.get_logger()
-    loggertmp.set_file(self.name+'/uttnum.log')
+    loggerbatch = self.get_logger()
+    loggerbatch.set_file(self.name+'/uttnum.log')
     logger.print_save('Training...\nTraining start time: ' +
                       str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-    train_start_time=time.time()
+    train_start_time = time.time()
     for i_epoch in range(epoch):
       start_time = time.time()
       avg_lost = 0.0
@@ -49,33 +51,35 @@ class FastBasicModel(object):
       total_batch = x_len//batch_size if (x_len % batch_size == 0) else ((
           x_len//batch_size)+1)
       for i in range(total_batch):
-        loggertmp.print_save(str(i))
+        batch_begin_time = time.time()
         s_site = i*batch_size
         e_site = min(s_site+batch_size, x_len)
-        # print(x_len,s_site,e_site)
         x_y = data[s_site:e_site]
-        # print(np.shape(x_y))
-        x_batch = x_y[0]
-        y_batch = x_y[1]
-        # print(np.shape(x_y[0]),np.shape(x_y[1]))
+        x_batch = np.array(x_y[0], dtype=np.float32)
+        y_batch = np.array(x_y[1], dtype=np.float32)
         loss_t, _ = self.session.run((self.graph_node_dict[self.loss_nid],
                                       self.graph_node_dict[self.train_nid]),
                                      feed_dict={self.graph_node_dict[self.x_ph_nodeid]: x_batch,
                                                 self.graph_node_dict[self.y_ph_nodeid]: y_batch})
         avg_lost += float(loss_t)/total_batch
+        batch_cost_time = time.time()-batch_begin_time
+        if verbose:
+          loggerbatch.print_save(self.name+" Training : Epoch"+' %04d' %
+                                 (i_epoch+1)+", batch %04d Lost " % (i+1) + '%2.9lf' % loss_t+' Cost time : ' + str(int(batch_cost_time))+'S')
       duration = time.time() - start_time
-      start_time = time.time()
       if verbose:
         logger.print_save(self.name+" Training : Epoch"+' %04d' %
-                          (epoch+1)+" Lost "+str(avg_lost)+' Cost time : ' + str(duration))
+                          (i_epoch+1)+" Lost "+'%2.9lf' % avg_lost+' Cost time : ' + str(duration))
       else:
         logger.save(self.name+" Training : Epoch"+' %04d' %
-                    (epoch+1)+" Lost "+str(avg_lost)+' Cost time : ' + str(duration))
-    train_cost_time=time.time() - train_start_time
+                    (i_epoch+1)+" Lost "+'%2.9lf' % avg_lost+' Cost time : ' + str(duration))
+    train_cost_time = time.time() - train_start_time
     if verbose:
-      logger.print_save("\n"+self.name+' Optimizer Finished. Cost time : ' + str(train_cost_time))
+      logger.print_save(
+          "\n"+self.name+' Optimizer Finished. Cost time : ' + str(train_cost_time))
     else:
-      logger.save("\n"+self.name+' Optimizer Finished. Cost time : ' + str(train_cost_time))
+      logger.save("\n"+self.name +
+                  ' Optimizer Finished. Cost time : ' + str(train_cost_time))
     logger.print_save(
         'Trainning complete time: '+str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
 

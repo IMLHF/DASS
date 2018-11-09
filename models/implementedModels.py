@@ -5,12 +5,12 @@ from utils.tf_tool import sigmoid_tdnn_layer
 from utils import tf_tool
 
 
-class CONV_SPEECH_SEPARTION(FastBasicModel):
+class DEEP_SPEECH_SEPARTION(FastBasicModel):
   """
   传统深度语音分离方法，使用卷积网络实现
   """
 
-  def __init__(self, layers_size, times_width, loss_fun, learning_rate):
+  def __init__(self, layers_size, times_width, loss_fun, learning_rate, gpu_list, name):
     """
     Parameters
     ----------
@@ -21,31 +21,34 @@ class CONV_SPEECH_SEPARTION(FastBasicModel):
     config : ``config`` class
         The config of your model, we only need use its 'batch_size' member.
     """
+    self.gpu_list=gpu_list
     self.loss_function = loss_fun
     self.learning_rat = learning_rate
     self.layers_size = layers_size
     self.times_width = times_width
-    FastBasicModel.__init__(self, 'conventional_deep_speech_separation')
+    self.debug = None
+    self.debug = []#TODO rm
+    FastBasicModel.__init__(self, name)
 
   def _build_graph(self):
-    gpu_list = [0, 1]
     optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rat)
     x_in = tf.placeholder(
         "float32", shape=[None, None, self.layers_size[0]])
     y_reference = tf.placeholder(
         "float32", shape=[None, None, self.layers_size[-1]])
 
-    n_gpu = len(gpu_list)
+    n_gpu = len(self.gpu_list)
     n_x = tf.shape(x_in)[0]
-    print('x_in--------------',np.shape(x_in))
+    # self.debug.append(tf.shape(x_in))  # TODO rm
     dataslice = tf_tool.get_gpu_batch_size_list(n_x, n_gpu)
-    for i_gpu, gpu_id in enumerate(gpu_list):
-      x_in_gpu_batch = x_in[dataslice[i_gpu]:dataslice[i_gpu+1]]
-      y_refer_gpu_batch = y_reference[dataslice[i_gpu]:dataslice[i_gpu+1]]
-      with tf.device('/gpu:%d' % gpu_id):
-        with tf.name_scope('tower_%d' % gpu_id):
-          with tf.variable_scope('gpu_variables', reuse=tf.AUTO_REUSE):
-
+    x_in_list=tf.split(x_in,dataslice,axis=0)
+    y_reference_list=tf.split(y_reference,dataslice,axis=0)
+    with tf.variable_scope('gpu_variables', reuse=tf.AUTO_REUSE):
+      for i_gpu, gpu_id in enumerate(self.gpu_list):
+        with tf.device('/gpu:%d' % gpu_id):
+          with tf.name_scope('tower_%d' % gpu_id):
+            x_in_gpu_batch = x_in_list[i_gpu]
+            y_refer_gpu_batch = y_reference_list[i_gpu]
             y_out = x_in_gpu_batch
             for i, units_num in enumerate(self.layers_size[1:]):
               if i == 0:

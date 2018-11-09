@@ -1,11 +1,18 @@
 import traceback
 import os
+import shutil
 
 
 class LOGGER(object):
   def __init__(self, root):
     self.root = root
     self.file = None
+
+  def rmdir(self,file):
+    file=self.root+'/'+file
+    if os.path.exists(file):
+      shutil.rmtree(file)
+    os.makedirs(file)
 
   def set_file(self, file=""):
     self.file = file
