@@ -65,12 +65,13 @@ class SimpleBasicModel(object):
                                       self.graph_node_dict[self.train_nid]),
                                      feed_dict={self.graph_node_dict[self.x_ph_nodeid]: x_batch,
                                                 self.graph_node_dict[self.y_ph_nodeid]: y_batch})
-        avg_lost += float(loss_t)/total_batch
+        avg_lost += float(loss_t)
         batch_cost_time = time.time()-batch_begin_time
         if verbose:
           loggerbatch.print_save(self.name+" Training : Epoch"+' %04d' %
                                  (i_epoch+1)+", batch %04d Lost " % (i+1) + '%02.9lf' % loss_t+' Cost time : ' + '%02.2lf' % batch_cost_time+'S')
       duration = time.time() - start_time
+      avg_lost/=total_batch
       if verbose:
         logger.print_save(self.name+" Training : Epoch"+' %04d' %
                           (i_epoch+1)+" Lost "+'%02.9lf' % avg_lost+' Cost time : ' + '%02.2lf' % duration+'S')
@@ -87,17 +88,30 @@ class SimpleBasicModel(object):
     logger.print_save(
         'Trainning complete time: '+str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
 
-  def test_MSE(self, x, y):
+  def test_MSE(self, data, batch_size):
     logger = self.get_logger()
     logger.set_file(self.name+'/test.log')
-    y_out = self.predict(x)
-    return np.mean((y-y_out)**2)
+    x_len = len(data)
+    total_batch = x_len//batch_size if (x_len % batch_size == 0) else ((
+        x_len//batch_size)+1)
+    mse_list=[]
+    for i in range(total_batch):
+      s_site = i*batch_size
+      e_site = min(s_site+batch_size, x_len)
+      x_y=data[s_site:e_site]
+      x=x_y[0]
+      y=x_y[1]
+      y_out = self.predict(x)
+      mse=np.mean((y-y_out)**2)
+      logger.print_save('Batch %04d MSE : %lf' % (i,mse))
+      mse_list.append(mse)
+    logger.print_save('Average Test MSE : %lf' % np.mean(mse_list))
 
   def predict(self, x):
     # logger = self.get_logger()
     # logger.set_file(self.name+'/predict.log')
     return self.session.run(self.graph_node_dict[self.predict_nid],
-                            feed_dict={self.x_ph_nodeid: x})
+                            feed_dict={self.graph_node_dict[self.x_ph_nodeid]: x})
 
   @staticmethod
   def get_logger():
