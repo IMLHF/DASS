@@ -38,6 +38,7 @@ class DEEP_SPEECH_SEPARTION(SimpleBasicModel):
     self.debug = None
     self.debug = []  # TODO rm
     SimpleBasicModel.__init__(self, name)
+    self.saver = tf.train.Saver(max_to_keep=3)
 
   def _build_graph(self):
     optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rat)
@@ -72,19 +73,49 @@ class DEEP_SPEECH_SEPARTION(SimpleBasicModel):
 
             loss = self.loss_function(y_refer_gpu_batch, y_out)
             grads = optimizer.compute_gradients(loss)
-            tf_tool.tower_to_collection(tower_y_in=y_refer_gpu_batch, tower_losses=loss,
-                                        tower_grads=grads, tower_y_outs=y_out)
+            tf_tool.tower_to_collection(tower_losses=loss,
+                                        tower_grads=grads,
+                                        tower_y_outs=y_out)
 
-    aver_loss = tf.reduce_mean(tf.get_collection('tower_losses'))
+    aver_loss = tf.reduce_mean(
+        tf.get_collection('tower_losses'), name='avg_loss')
     train_op = optimizer.apply_gradients(
-        tf_tool.average_gradients(tf.get_collection('tower_grads')))
+        tf_tool.average_gradients(tf.get_collection('tower_grads')), name='train_op')
     return {
         self.x_ph_nodeid: x_in,
         self.y_ph_nodeid: y_reference,
-        self.predict_nid: tf.concat(tf.get_collection('tower_y_outs'), 0),
+        self.predict_nid: tf.concat(tf.get_collection('tower_y_outs'), 0, name='predict'),
         self.loss_nid: aver_loss,
         self.train_nid: train_op,
     }
 
+  def test_PIT(self, data, batch_size):
+    logger = self.get_logger()
+    logger.set_file(self.name+'/test.log')
+    x_len = len(data)
+    total_batch = x_len//batch_size if (x_len % batch_size == 0) else ((
+        x_len//batch_size)+1)
+    mse_list = []
+    for i in range(total_batch):
+      s_site = i*batch_size
+      e_site = min(s_site+batch_size, x_len)
+      x_y = data[s_site:e_site]
+      x = x_y[0]
+      y = x_y[1]
+      y_out = self.predict(x)
+      mse1 = np.mean((y-y_out)**2, (1, 2))
+      y_out_speaker1, y_out_speaker2 = np.split(y_out, 2, axis=-1)
+      y_out_swaped = np.concatenate([y_out_speaker2, y_out_speaker1], axis=-1)
+      mse2 = np.mean((y-y_out_swaped)**2, (1, 2))
+      loss = np.where(mse1 < mse2, mse1, mse2)
+      mse = np.mean(loss)
+      logger.print_save('Batch %04d MSE : %lf' % (i+1, mse))
+      mse_list.append(mse)
+    logger.print_save('Test Average MSE : %lf' % np.mean(mse_list))
+
   def save_model(self):
-    print("000 ignore save")
+    logger = self.get_logger()
+    logger.set_file(self.name+'/save_model.log')
+    logger.print_save("Saving model...")
+    self.saver.save(self.session, '_log/models/'+self.name+'saved_model')
+    logger.print_save(self.name+" model saved.")
