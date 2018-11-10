@@ -142,7 +142,7 @@ def _init_data__(rawdata, data_dict_dir, logger):
         if wav[-4:] == ".wav":
           cwl_validation_file.write(speaker_dir+'/'+wav+'\n')
           clean_wav_list_validation.append(speaker_dir+'/'+wav)
-      for wav in speaker_wav_list[320:]:
+      for wav in speaker_wav_list[30:]:
         if wav[-4:] == ".wav":
           cwl_test_cc_file.write(speaker_dir+'/'+wav+'\n')
           clean_wav_list_test_cc.append(speaker_dir+'/'+wav)
