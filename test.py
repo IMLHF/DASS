@@ -93,8 +93,8 @@ def run():
 if __name__ == "__main__":
   # data_manager_test()
   # concat_test()
-  # run()
-  x=tf.random_normal([10,257,7])
-  y=tf.random_normal([7])
-  print(x/y)
+  run()
+  # x=tf.random_normal([10,257,7])
+  # y=tf.random_normal([7])
+  # print(x/y)
 
