@@ -2,7 +2,19 @@ import numpy as np
 import scipy
 import scipy.signal
 import librosa
+import matplotlib.pyplot as plt
 
+
+def picture_spec(spec,name):
+  for i in range(np.shape(spec)[0]):
+    spec_t=spec[i]
+    plt.pcolormesh(spec_t,)
+    plt.title('STFT Magnitude')
+    plt.xlabel('Frequency')
+    plt.ylabel('Time')
+    plt.savefig(name+str(i)+".jpg")
+    print("write pic "+name+str(i))
+    # plt.show()
 
 def magnitude_spectrum_sci_stft(signal, fs, NFFT=512, overlap=256):
   f, t, mag_frames = np.absolute(scipy.signal.stft(signal,

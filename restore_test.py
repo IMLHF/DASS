@@ -2,7 +2,18 @@ from dataManager.data import mixed_aishell
 import tensorflow as tf
 import numpy as np
 from abc import abstractmethod, ABCMeta
-import test
+import matplotlib.pyplot as plt
+
+def picture_spec(spec,name):
+  for i in range(np.shape(spec)[0]):
+    spec_t=spec[i]
+    plt.pcolormesh(spec_t,)
+    plt.title('STFT Magnitude')
+    plt.xlabel('Frequency')
+    plt.ylabel('Time')
+    plt.savefig(name+str(i)+".jpg")
+    print("write pic "+name+str(i))
+    # plt.show()
 
 def load_model_test(x,y):
   config = tf.ConfigProto(allow_soft_placement=True)
@@ -52,13 +63,13 @@ def separate_speech():
   data_dir = '/mnt/d/tf_recipe/PIT_SYS/utterance_test/speaker_set'
   data_mixed = mixed_aishell.read_data_sets(data_dir)
   mixX=np.array(data_mixed.train.X[:10])
-  test.picture_spec((mixX*8-3),'exp/mixSpeech')
+  picture_spec((mixX*8-3),'exp/mixSpeech')
   raw_Y=np.array(data_mixed.train.Y[:10])
-  test.picture_spec((raw_Y*8-3),'exp/rawCLEAN')
+  picture_spec((raw_Y*8-3),'exp/rawCLEAN')
   raw=np.array(data_mixed.train.X[:10],dtype=np.float32)
   pre=load_model_test(raw,None)
   pre=(pre*8-3)
-  test.picture_spec(pre,'exp/restorePIT')
+  picture_spec(pre,'exp/restorePIT')
   for i in range(10):
     np.savetxt('exp/restorePIT.num'+str(i),pre[i])
     np.savetxt('exp/restorePIT.numT'+str(i),pre[i].T)

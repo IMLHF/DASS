@@ -96,6 +96,14 @@ def decode():
     raw_spec1 = mixed_aishell.rmNormalization(raw_spec1)
     raw_spec2 = mixed_aishell.rmNormalization(raw_spec2)
 
+    if FLAGS.decode_show_spec:
+      cleaned=np.concatenate([cleaned1,cleaned2],axis=-1)
+      raw_spec=np.concatenate([raw_spec1,raw_spec2],axis=-1)
+      utils.spectrum_tool.picture_spec(cleaned,
+                                       'exp/lstm_pit/decode_ans/restore_spec_')
+      utils.spectrum_tool.picture_spec(raw_spec,
+                                       'exp/lstm_pit/decode_ans/raw_spec_')
+
     spec1 = cleaned1 * np.exp(angle_batch*1j)
     spec2 = cleaned2 * np.exp(angle_batch*1j)
     raw_spec1 *= np.exp(angle_batch*1j)
@@ -108,7 +116,7 @@ def decode():
           spec2[i].T, (FLAGS.input_size-1)*2, FLAGS.input_size-1)
       tmpY = np.concatenate([reY1, reY2])
       wavefile = wave.open(
-          'exp/lstm_pit/restore_audio/restore_audio_'+str(i)+'.wav', 'wb')
+          'exp/lstm_pit/decode_ans/restore_audio_'+str(i)+'.wav', 'wb')
       nchannels = 1
       sampwidth = 2  # 采样位宽，2表示16位
       framerate = 16000
@@ -127,12 +135,7 @@ def decode():
       tmpY = np.concatenate([rawY1, rawY2])
       wavefile = wave.open(
           'exp/lstm_pit/restore_audio/raw_audio_'+str(i)+'.wav', 'wb')
-      nchannels = 1
-      sampwidth = 2  # 采样位宽，2表示16位
-      framerate = 16000
       nframes = len(tmpY)
-      comptype = "NONE"
-      compname = "not compressed"
       wavefile.setparams((nchannels, sampwidth, framerate, nframes,
                           comptype, compname))
       wavefile.writeframes(
@@ -353,17 +356,17 @@ if __name__ == "__main__":
       help="Flag indicating decoding or training."
   )
   parser.add_argument(
+      '--decode_show_spec',
+      type=int,
+      default=1,
+      help="Flag indicating show spectrum or not."
+  )
+  parser.add_argument(
       '--resume_training',
       type=str,
       default='False',
       help="Flag indicating whether to resume training from cptk."
   )
-  # parser.add_argument(
-  #     '--data_dir',
-  #     type=str,
-  #     default='data/wsj0',
-  #     help="Directory of train, val and test data."
-  # )
   # parser.add_argument(
   #     '--lists_dir',
   #     type=str,
