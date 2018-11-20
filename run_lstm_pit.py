@@ -26,25 +26,6 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 
 FLAGS = None
 
-
-def read_list_file(name, batch_size):
-  file_name = os.path.join(FLAGS.lists_dir, name + ".lst")
-  if not os.path.exists(file_name):
-    tf.logging.fatal("File doesn't exist %s", file_name)
-    sys.exit(-1)
-  config_file = open(file_name)
-  tfrecords_lst = []
-  for line in config_file:
-    utt_id = line.strip().split()[0]
-    tfrecords_name = utt_id
-    if not os.path.exists(tfrecords_name):
-      tf.logging.fatal("TFRecords doesn't exist %s", tfrecords_name)
-      sys.exit(-1)
-    tfrecords_lst.append(tfrecords_name)
-  num_batches = int(len(tfrecords_lst) / batch_size + 0.5)
-  return tfrecords_lst, num_batches
-
-
 def decode():
   """Decoding the inputs using current model."""
 
