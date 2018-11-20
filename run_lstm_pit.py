@@ -45,7 +45,7 @@ def read_list_file(name, batch_size):
   return tfrecords_lst, num_batches
 
 
-def decode(dataset):
+def decode():
   """Decoding the inputs using current model."""
 
   # data_dir = '/home/student/work/pit_test/data_small'
@@ -69,7 +69,7 @@ def decode(dataset):
       tf.logging.info("Restore from " + ckpt.model_checkpoint_path)
       model.saver.restore(sess, ckpt.model_checkpoint_path)
     else:
-      tf.logging.fatal("checkpoint not fou1nd.")
+      tf.logging.fatal("checkpoint not found.")
       sys.exit(-1)
 
   data_dir = FLAGS.data_dir
