@@ -16,6 +16,8 @@ import numpy as np
 import tensorflow as tf
 from models.lstm_pit import LSTM
 from dataManager.data import mixed_aishell
+import utils
+import wave
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 
@@ -43,25 +45,17 @@ def read_list_file(name, batch_size):
   return tfrecords_lst, num_batches
 
 
-def decode():
+def decode(dataset):
   """Decoding the inputs using current model."""
-  '''
-  pass
-  # tfrecords_lst, num_batches = read_list_file('tt_tf', FLAGS.batch_size)
+
+  # data_dir = '/home/student/work/pit_test/data_small'
+  speech_num = 10
+  data_dir = '/mnt/d/tf_recipe/PIT_SYS/utterance_test/speaker_set'
+  data_mixed = mixed_aishell.read_data_sets(data_dir)
 
   with tf.Graph().as_default():
-    # with tf.device('/cpu:0'):
-    #   with tf.name_scope('input'):
-    #     tt_mixed, tt_labels, tt_genders, tt_lengths = get_padded_batch(
-    #         tfrecords_lst, FLAGS.batch_size, FLAGS.input_size*2,
-    #         FLAGS.output_size*2, num_enqueuing_threads=1,
-    #         num_epochs=1, shuffle=False)
-    #     tt_inputs = tf.slice(tt_mixed, [0, 0, 0], [-1, -1, FLAGS.input_size])
-    #     tt_angles = tf.slice(tt_mixed, [0, 0, FLAGS.input_size], [-1, -1, -1])
-    # # Create two models with train_input and val_input individually.
     with tf.name_scope('model'):
-      model = LSTM(FLAGS, tt_inputs, tt_labels,
-                   tt_lengths, tt_genders, infer=True)
+      model = LSTM(FLAGS, infer=True)
 
     init = tf.group(tf.global_variables_initializer(),
                     tf.local_variables_initializer())
@@ -78,60 +72,79 @@ def decode():
       tf.logging.fatal("checkpoint not fou1nd.")
       sys.exit(-1)
 
-    coord = tf.train.Coordinator()
-    threads = tf.train.start_queue_runners(sess=sess, coord=coord)
-   # cmvn_filename = os.path.join(FLAGS.date_dir, "/train_cmvn.npz")
-    # if os.path.isfile(cmvn_filename):
-    #    cmvn = np.load(cmvn_filename)
-    # else:
-    #    tf.logging.fatal("%s not exist, exit now." % cmvn_filename)
-    #    sys.exit(-1)
-
   data_dir = FLAGS.data_dir
   if not os.path.exists(data_dir):
     os.makedirs(data_dir)
-  processed = 0
   try:
-    for batch in range(1):
-      if coord.should_stop():
-        break
-      if FLAGS.assign == 'def':
-        cleaned1, cleaned2, angles, lengths = sess.run(
-            [model._cleaned1, model._cleaned2, tt_angles, tt_lengths])
-      else:
-        x1, x2 = model.get_opt_output()
-        cleaned1, cleaned2, angles, lengths = sess.run(
-            [x1, x2, tt_angles, tt_lenghts])
-      spec1 = cleaned1 * np.exp(angles*1j)
-      spec2 = cleaned2 * np.exp(angles*1j)
-      # sequence = activations * cmvn['stddev_labels'] + \
-      #    cmvn['mean_labels']
-      for i in range(0, FLAGS.batch_size):
-        tffilename = tfrecords_lst[i+processed]
-        (_, name) = os.path.split(tffilename)
-        (partname, _) = os.path.splitext(name)
-        wav_name1 = data_dir + '/' + partname + '_1.wav'
-        wav_name2 = data_dir + '/' + partname + '_2.wav'
-        wav1 = istft(spec1[i, 0:lengths[i], :], size=256, shift=128)
-        wav2 = istft(spec2[i, 0:lengths[i], :], size=256, shift=128)
-        audiowrite(wav1, wav_name1, 8000, True, True)
-        audiowrite(wav2, wav_name2, 8000, True, True)
-      processed = processed + FLAGS.batch_size
+    test_cc_X_Y = data_mixed.test_cc.X_Y[:speech_num]
+    angle_batch = data_mixed.test_cc.X_Theta[:speech_num]
+    x_batch = test_cc_X_Y[0]
+    y_batch = test_cc_X_Y[1]
+    lengths = np.array([np.shape(x_batch)[1]]*np.shape(x_batch)[0])
+    cleaned1, cleaned2 = sess.run(
+        [model.cleaned1, model.cleaned2],
+        feed_dict={
+            model.inputs: x_batch,
+            model.labels: y_batch,
+            model.lengths: lengths,
+        })
 
-      if batch % 50 == 0:
-        print(batch)
+    raw_spec1, raw_spec2 = np.split(y_batch, 2, axis=-1)
+
+    cleaned1 = mixed_aishell.rmNormalization(cleaned1)
+    cleaned2 = mixed_aishell.rmNormalization(cleaned2)
+    raw_spec1 = mixed_aishell.rmNormalization(raw_spec1)
+    raw_spec2 = mixed_aishell.rmNormalization(raw_spec2)
+
+    spec1 = cleaned1 * np.exp(angle_batch*1j)
+    spec2 = cleaned2 * np.exp(angle_batch*1j)
+    raw_spec1 *= np.exp(angle_batch*1j)
+    raw_spec2 *= np.exp(angle_batch*1j)
+
+    for i in range(speech_num):
+      reY1 = utils.spectrum_tool.librosa_istft(
+          spec1[i].T, (FLAGS.input_size-1)*2, FLAGS.input_size-1)
+      reY2 = utils.spectrum_tool.librosa_istft(
+          spec2[i].T, (FLAGS.input_size-1)*2, FLAGS.input_size-1)
+      tmpY = np.concatenate([reY1, reY2])
+      wavefile = wave.open(
+          'exp/lstm_pit/restore_audio/restore_audio_'+str(i)+'.wav', 'wb')
+      nchannels = 1
+      sampwidth = 2  # 采样位宽，2表示16位
+      framerate = 16000
+      nframes = len(tmpY)
+      comptype = "NONE"
+      compname = "not compressed"
+      wavefile.setparams((nchannels, sampwidth, framerate, nframes,
+                          comptype, compname))
+      wavefile.writeframes(
+          np.array(tmpY, dtype=np.int16))
+
+      rawY1 = utils.spectrum_tool.librosa_istft(
+          raw_spec1[i].T, (FLAGS.input_size-1)*2, FLAGS.input_size-1)
+      rawY2 = utils.spectrum_tool.librosa_istft(
+          raw_spec2[i].T, (FLAGS.input_size-1)*2, FLAGS.input_size-1)
+      tmpY = np.concatenate([rawY1, rawY2])
+      wavefile = wave.open(
+          'exp/lstm_pit/restore_audio/raw_audio_'+str(i)+'.wav', 'wb')
+      nchannels = 1
+      sampwidth = 2  # 采样位宽，2表示16位
+      framerate = 16000
+      nframes = len(tmpY)
+      comptype = "NONE"
+      compname = "not compressed"
+      wavefile.setparams((nchannels, sampwidth, framerate, nframes,
+                          comptype, compname))
+      wavefile.writeframes(
+          np.array(tmpY, dtype=np.int16))
 
   except Exception as e:
-    # Report exceptions to the coordinator.
-    coord.request_stop(e)
+    print(e)
   finally:
-    # Terminate as usual.  It is innocuous to request stop twice.
-    coord.request_stop()
-    coord.join(threads)
-
+    pass
   tf.logging.info("Done decoding.")
   sess.close()
-  '''
+  ''''''
 
 
 def train_one_epoch(sess, coord, tr_model, data):
@@ -310,10 +323,8 @@ def train():
                 "finished, too small rel. improvement %g" % rel_impr)
             break
     except Exception as e:
-      # Report exceptions to the coordinator.
       coord.request_stop(e)
     finally:
-      # Terminate as usual.  It is innocuous to request stop twice.
       coord.request_stop()
       # Wait for threads to finish.
       coord.join(threads)

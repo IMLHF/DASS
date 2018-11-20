@@ -49,10 +49,12 @@ def _mix_wav(waveData1, waveData2):
   mixedData = np.array(mixedData, dtype=np.int16)  # 必须指定是16位，因为写入音频时写入的是二进制数据
   return mixedData
 
+def rmNormalization(tmp):
+  return (10**(tmp*(LOG_NORM_MAX-LOG_NORM_MIN)+LOG_NORM_MIN))-0.5
 
 def _extract_norm_log_mag_spec(data):
   # 归一化的幅度谱对数
-  mag_spec = spectrum_tool.magnitude_spectrum_np_fft(
+  mag_spec = spectrum_tool.magnitude_spectrum_librosa_stft(
       data, NFFT, OVERLAP)
   log_mag_spec = np.log10(mag_spec+0.5)
   # log_power_spectrum_normalization
@@ -65,6 +67,9 @@ def _extract_norm_log_mag_spec(data):
   # log_mag_spec=(log_mag_spec-mean)/var
   return log_mag_spec
 
+def _extract_phase(data):
+  theta=spectrum_tool.phase_spectrum_librosa_stft(data,NFFT,OVERLAP)
+  return theta
 
 def _extract_feature_x(data_index_list):
   data = []
@@ -105,6 +110,15 @@ def _extract_feature_x_y(data_index_list):
     # print(np.shape(datax))
     # print(np.shape(datay))
   return [np.array(datax), np.array(datay)]
+
+def _extract_x_theta(data_index_list):
+  data = []
+  for data_index in data_index_list:
+    waveData1, waveData2 = _get_waveData1__waveData2(
+        data_index[0], data_index[1])
+    mixedData = _mix_wav(waveData1, waveData2)
+    data.append(_extract_phase(mixedData))
+  return data
 
 
 def _init_data__(rawdata, data_dict_dir, logger):
@@ -200,7 +214,8 @@ def read_data_sets(rawdata):
   # 集合元素获取器[x,y,x_y]
   itemgetor_list = [_extract_feature_x,
                     _extract_feature_y,
-                    _extract_feature_x_y]
+                    _extract_feature_x_y,
+                    _extract_x_theta]
   data = DATABASE(set_dict, itemgetor_list)
   data.train
   return data

@@ -62,10 +62,6 @@ def separate_speech():
   for i in range(10):
     np.savetxt('exp/restorePIT.num'+str(i),pre[i])
     np.savetxt('exp/restorePIT.numT'+str(i),pre[i].T)
-  # ansfile=open('exp/restorePIT.num','w+')
-  # np.set_printoptions(threshold=np.NaN)
-  # ansfile.writelines(str(pre))
-  # ansfile.close()
 
 if __name__=='__main__':
   # pit_test_for_load()

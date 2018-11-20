@@ -1,6 +1,7 @@
 import numpy as np
 import scipy
 import scipy.signal
+import librosa
 
 
 def magnitude_spectrum_sci_stft(signal, fs, NFFT=512, overlap=256):
@@ -13,6 +14,7 @@ def magnitude_spectrum_sci_stft(signal, fs, NFFT=512, overlap=256):
                                                    ))
   # pow_frames = (1.0 / NFFT) * ((mag_frames) ** 2)
   return t, f, mag_frames.T
+
 
 def magnitude_spectrum_np_fft(signal, NFFT=512, overlap=256):
   segsize = NFFT  # 每帧长度
@@ -33,3 +35,34 @@ def magnitude_spectrum_np_fft(signal, NFFT=512, overlap=256):
                                        ))
   # pow_frames = (1.0 / NFFT) * ((mag_frames) ** 2)
   return mag_frames
+
+
+def magnitude_spectrum_librosa_stft(signal, NFFT, overlap):
+  signal=np.array(signal,dtype=np.float)
+  tmp = librosa.core.stft(signal,
+                          n_fft=NFFT,
+                          hop_length=256,
+                          window=scipy.signal.windows.hann)
+  tmp = np.absolute(tmp)
+  return tmp.T
+
+
+def phase_spectrum_librosa_stft(signal, NFFT, overlap):
+  '''
+  return theta
+  '''
+  signal=np.array(signal,dtype=np.float)
+  tmp = librosa.core.stft(signal,
+                          n_fft=NFFT,
+                          hop_length=overlap,
+                          window=scipy.signal.windows.hann)
+  tmp = np.angle(tmp)
+  return tmp.T
+
+
+def librosa_istft(signal_complex, NFFT, overlap):
+  tmp = librosa.core.istft(signal_complex,
+                           win_length=NFFT,
+                           hop_length=overlap,
+                           window=scipy.signal.windows.hann)
+  return tmp
