@@ -54,7 +54,7 @@ def _extract_norm_log_mag_spec(data):
   # 归一化的幅度谱对数
   mag_spec = spectrum_tool.magnitude_spectrum_np_fft(
       data, NFFT, OVERLAP)
-  log_mag_spec = np.log10(mag_spec)
+  log_mag_spec = np.log10(mag_spec+0.5)
   # log_power_spectrum_normalization
   log_mag_spec[log_mag_spec > LOG_NORM_MAX] = LOG_NORM_MAX
   log_mag_spec[log_mag_spec < LOG_NORM_MIN] = LOG_NORM_MIN
@@ -134,7 +134,7 @@ def _init_data__(rawdata, data_dict_dir, logger):
     if os.path.isdir(speaker_dir):
       speaker_wav_list = os.listdir(speaker_dir)
       speaker_wav_list.sort()
-      for wav in speaker_wav_list[:100]:
+      for wav in speaker_wav_list[:260]:
         if wav[-4:] == ".wav":
           cwl_train_file.write(speaker_dir+'/'+wav+'\n')
           clean_wav_list_train.append(speaker_dir+'/'+wav)
@@ -142,7 +142,7 @@ def _init_data__(rawdata, data_dict_dir, logger):
         if wav[-4:] == ".wav":
           cwl_validation_file.write(speaker_dir+'/'+wav+'\n')
           clean_wav_list_validation.append(speaker_dir+'/'+wav)
-      for wav in speaker_wav_list[30:]:
+      for wav in speaker_wav_list[-30:]:
         if wav[-4:] == ".wav":
           cwl_test_cc_file.write(speaker_dir+'/'+wav+'\n')
           clean_wav_list_test_cc.append(speaker_dir+'/'+wav)
@@ -153,16 +153,9 @@ def _init_data__(rawdata, data_dict_dir, logger):
   logger.print_save('train clean: '+str(len(clean_wav_list_train)))
   logger.print_save('validation clean: '+str(len(clean_wav_list_validation)))
   logger.print_save('test_cc clean: '+str(len(clean_wav_list_test_cc)))
-  logger.print_save('train mixed about: '+str(len(clean_wav_list_train)
-                                              * len(clean_wav_list_train)))
-  logger.print_save('validation mixed about: '+str(len(clean_wav_list_validation)
-                                                   * len(clean_wav_list_validation)))
-  logger.print_save('test_cc mixed about: '+str(len(clean_wav_list_test_cc)
-                                                * len(clean_wav_list_test_cc)))
-  logger.print_save('All about: '+str(len(clean_wav_list_train)*len(clean_wav_list_train)+len(clean_wav_list_validation)
-                                      * len(clean_wav_list_validation)+len(clean_wav_list_test_cc)*len(clean_wav_list_test_cc)))
 
   data_class_dir = ['train', 'validation', 'test_cc']
+  all_mixed=0
   for (clean_wav_list, j) in zip((clean_wav_list_train, clean_wav_list_validation, clean_wav_list_test_cc), range(3)):
     logger.print_save('\n'+data_class_dir[j]+" data preparing...")
     logger.print_save('Current time: ' +
@@ -170,8 +163,11 @@ def _init_data__(rawdata, data_dict_dir, logger):
     mixed_wav_list_file = open(
         data_dict_dir+'/'+data_class_dir[j]+'/mixed_wav_dir.list', 'a+')
     mixed_wave_list = []
-    for utt1_dir in clean_wav_list:
-      for utt2_dir in clean_wav_list:
+    len_wav_list=len(clean_wav_list)
+    for i_utt in range(len_wav_list):
+      for j_utt in range(i_utt,len_wav_list):
+        utt1_dir=clean_wav_list[i_utt]
+        utt2_dir=clean_wav_list[j_utt]
         speaker1 = utt1_dir.split('/')[-2]
         speaker2 = utt2_dir.split('/')[-2]
         if speaker1 == speaker2:
@@ -181,8 +177,12 @@ def _init_data__(rawdata, data_dict_dir, logger):
     mixed_wav_list_file.close()
     scipy.io.savemat(
         data_dict_dir+'/'+data_class_dir[j]+'/mixed_wav_dir.mat', {"mixed_wav_dir": mixed_wave_list})
+    all_mixed+=len(mixed_wave_list)
+    logger.print_save(data_class_dir[j]+' mixed: '+str(len(mixed_wave_list)))
+  logger.print_save('All : '+str(all_mixed))
   logger.print_save(
       '\nData preparation over time: '+str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+
 
 
 # API

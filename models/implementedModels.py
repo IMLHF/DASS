@@ -46,6 +46,8 @@ class DEEP_SPEECH_SEPARTION(SimpleBasicModel):
         "float32", shape=[None, None, self.layers_size[0]])
     y_reference = tf.placeholder(
         "float32", shape=[None, None, self.layers_size[-1]])
+    # print(x_in.name)
+    # print(y_reference.name)
 
     n_gpu = len(self.gpu_list)
     n_x = tf.shape(x_in)[0]
@@ -61,12 +63,8 @@ class DEEP_SPEECH_SEPARTION(SimpleBasicModel):
             y_refer_gpu_batch = y_reference_list[i_gpu]
             y_out = x_in_gpu_batch
             for i, units_num in enumerate(self.layers_size[1:]):
-              if i == 0:
-                y_out = sigmoid_tdnn_layer(
-                    y_out, self.times_width[i], 1, units_num, 'SAME', 'tdnn_layer_' + str(i+1))
-              else:
-                y_out = sigmoid_tdnn_layer(
-                    y_out, self.times_width[i], 1, units_num, 'SAME', 'tdnn_layer_' + str(i+1))
+              y_out = sigmoid_tdnn_layer(
+                  y_out, self.times_width[i], 1, units_num, 'SAME', 'tdnn_layer_' + str(i+1))
 
             y_out = tf.multiply(
                 tf.concat([x_in_gpu_batch, x_in_gpu_batch], axis=2), y_out)  # MASK
@@ -81,13 +79,16 @@ class DEEP_SPEECH_SEPARTION(SimpleBasicModel):
         tf.get_collection('tower_losses'), name='avg_loss')
     train_op = optimizer.apply_gradients(
         tf_tool.average_gradients(tf.get_collection('tower_grads')), name='train_op')
-    return {
+    tmpdict= {
         self.x_ph_nodeid: x_in,
         self.y_ph_nodeid: y_reference,
         self.predict_nid: tf.concat(tf.get_collection('tower_y_outs'), 0, name='predict'),
         self.loss_nid: aver_loss,
         self.train_nid: train_op,
     }
+    # print(tmpdict[self.predict_nid].name)
+    # exit(0)
+    return tmpdict
 
   def test_PIT(self, data, batch_size):
     logger = self.get_logger()
@@ -117,5 +118,5 @@ class DEEP_SPEECH_SEPARTION(SimpleBasicModel):
     logger = self.get_logger()
     logger.set_file(self.name+'/save_model.log')
     logger.print_save("Saving model...")
-    self.saver.save(self.session, '_log/models/'+self.name+'saved_model')
+    self.saver.save(self.session, '_log/models/'+self.name+'/saved_model/'+self.name)
     logger.print_save(self.name+" model saved.")
