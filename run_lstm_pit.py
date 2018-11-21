@@ -18,6 +18,8 @@ from models.lstm_pit import LSTM
 from dataManager.data import mixed_aishell
 import utils
 import wave
+import shutil
+import traceback
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 
@@ -26,12 +28,15 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 
 FLAGS = None
 
+
 def decode():
   """Decoding the inputs using current model."""
 
-  # data_dir = '/home/student/work/pit_test/data_small'
   speech_num = 10
-  data_dir = '/mnt/d/tf_recipe/PIT_SYS/utterance_test/speaker_set'
+  speech_start = 100000
+  data_dir = '/home/student/work/pit_test/data_small'
+  # data_dir = '/mnt/d/tf_recipe/PIT_SYS/utterance_test/speaker_set'
+  # data_dir = '/mnt/d/tf_recipe/ALL_DATA/aishell/mixed_data_small'
   data_mixed = mixed_aishell.read_data_sets(data_dir)
 
   with tf.Graph().as_default():
@@ -53,79 +58,87 @@ def decode():
       tf.logging.fatal("checkpoint not found.")
       sys.exit(-1)
 
-  data_dir = FLAGS.data_dir
-  if not os.path.exists(data_dir):
-    os.makedirs(data_dir)
-  try:
-    test_cc_X_Y = data_mixed.test_cc.X_Y[:speech_num]
-    angle_batch = data_mixed.test_cc.X_Theta[:speech_num]
-    x_batch = test_cc_X_Y[0]
-    y_batch = test_cc_X_Y[1]
-    lengths = np.array([np.shape(x_batch)[1]]*np.shape(x_batch)[0])
-    cleaned1, cleaned2 = sess.run(
-        [model.cleaned1, model.cleaned2],
-        feed_dict={
-            model.inputs: x_batch,
-            model.labels: y_batch,
-            model.lengths: lengths,
-        })
+  test_cc_X_Y = data_mixed.train.X_Y[speech_start:speech_start+speech_num]
+  angle_batch = np.array(
+      data_mixed.train.X_Theta[speech_start:speech_start+speech_num])
+  x_batch = test_cc_X_Y[0]
+  y_batch = test_cc_X_Y[1]
+  lengths = np.array([np.shape(x_batch)[1]]*np.shape(x_batch)[0])
+  cleaned1, cleaned2 = sess.run(
+      [model.cleaned1, model.cleaned2],
+      feed_dict={
+          model.inputs: x_batch,
+          model.labels: y_batch,
+          model.lengths: lengths,
+      })
 
-    raw_spec1, raw_spec2 = np.split(y_batch, 2, axis=-1)
+  raw_spec1, raw_spec2 = np.split(y_batch, 2, axis=-1)
 
-    cleaned1 = mixed_aishell.rmNormalization(cleaned1)
-    cleaned2 = mixed_aishell.rmNormalization(cleaned2)
-    raw_spec1 = mixed_aishell.rmNormalization(raw_spec1)
-    raw_spec2 = mixed_aishell.rmNormalization(raw_spec2)
+  cleaned1 = np.array(mixed_aishell.rmNormalization(cleaned1))
+  cleaned2 = np.array(mixed_aishell.rmNormalization(cleaned2))
+  raw_spec1 = np.array(mixed_aishell.rmNormalization(raw_spec1))
+  raw_spec2 = np.array(mixed_aishell.rmNormalization(raw_spec2))
 
-    if FLAGS.decode_show_spec:
-      cleaned=np.concatenate([cleaned1,cleaned2],axis=-1)
-      raw_spec=np.concatenate([raw_spec1,raw_spec2],axis=-1)
-      utils.spectrum_tool.picture_spec(cleaned,
-                                       'exp/lstm_pit/decode_ans/restore_spec_')
-      utils.spectrum_tool.picture_spec(raw_spec,
-                                       'exp/lstm_pit/decode_ans/raw_spec_')
+  decode_ans_dir = os.path.join(FLAGS.save_dir, 'decode_ans')
+  if os.path.exists(decode_ans_dir):
+    shutil.rmtree(decode_ans_dir)
+  os.makedirs(decode_ans_dir)
 
-    spec1 = cleaned1 * np.exp(angle_batch*1j)
-    spec2 = cleaned2 * np.exp(angle_batch*1j)
-    raw_spec1 *= np.exp(angle_batch*1j)
-    raw_spec2 *= np.exp(angle_batch*1j)
+  if FLAGS.decode_show_spec:
+    cleaned = np.concatenate([cleaned1, cleaned2], axis=-1)
+    raw_spec = np.concatenate([raw_spec1, raw_spec2], axis=-1)
+    utils.spectrum_tool.picture_spec(np.log10(cleaned+0.001),
+                                     decode_ans_dir+'/restore_spec_')
+    utils.spectrum_tool.picture_spec(np.log10(raw_spec+0.001),
+                                     decode_ans_dir+'/raw_spec_')
 
-    for i in range(speech_num):
-      reY1 = utils.spectrum_tool.librosa_istft(
-          spec1[i].T, (FLAGS.input_size-1)*2, FLAGS.input_size-1)
-      reY2 = utils.spectrum_tool.librosa_istft(
-          spec2[i].T, (FLAGS.input_size-1)*2, FLAGS.input_size-1)
-      tmpY = np.concatenate([reY1, reY2])
-      wavefile = wave.open(
-          'exp/lstm_pit/decode_ans/restore_audio_'+str(i)+'.wav', 'wb')
-      nchannels = 1
-      sampwidth = 2  # 采样位宽，2表示16位
-      framerate = 16000
-      nframes = len(tmpY)
-      comptype = "NONE"
-      compname = "not compressed"
-      wavefile.setparams((nchannels, sampwidth, framerate, nframes,
-                          comptype, compname))
-      wavefile.writeframes(
-          np.array(tmpY, dtype=np.int16))
+  spec1 = cleaned1 * np.exp(angle_batch*1j)
+  spec2 = cleaned2 * np.exp(angle_batch*1j)
+  raw_spec1 = raw_spec1 * np.exp(angle_batch*1j)
+  raw_spec2 = raw_spec2 * np.exp(angle_batch*1j)
 
-      rawY1 = utils.spectrum_tool.librosa_istft(
-          raw_spec1[i].T, (FLAGS.input_size-1)*2, FLAGS.input_size-1)
-      rawY2 = utils.spectrum_tool.librosa_istft(
-          raw_spec2[i].T, (FLAGS.input_size-1)*2, FLAGS.input_size-1)
-      tmpY = np.concatenate([rawY1, rawY2])
-      wavefile = wave.open(
-          'exp/lstm_pit/restore_audio/raw_audio_'+str(i)+'.wav', 'wb')
-      nframes = len(tmpY)
-      wavefile.setparams((nchannels, sampwidth, framerate, nframes,
-                          comptype, compname))
-      wavefile.writeframes(
-          np.array(tmpY, dtype=np.int16))
+  for i in range(speech_num):
+    reY1 = utils.spectrum_tool.librosa_istft(
+        spec1[i].T, (FLAGS.input_size-1)*2, FLAGS.input_size-1)
+    reY2 = utils.spectrum_tool.librosa_istft(
+        spec2[i].T, (FLAGS.input_size-1)*2, FLAGS.input_size-1)
+    reCONY = np.concatenate([reY1, reY2])
+    wavefile = wave.open(
+        decode_ans_dir+('/restore_audio_%03d.wav' % i), 'wb')
+    nchannels = 1
+    sampwidth = 2  # 采样位宽，2表示16位
+    framerate = 16000
+    nframes = len(reCONY)
+    comptype = "NONE"
+    compname = "not compressed"
+    wavefile.setparams((nchannels, sampwidth, framerate, nframes,
+                        comptype, compname))
+    wavefile.writeframes(
+        np.array(reCONY, dtype=np.int16))
 
-  except Exception as e:
-    print(e)
-  finally:
-    pass
+    rawY1 = utils.spectrum_tool.librosa_istft(
+        raw_spec1[i].T, (FLAGS.input_size-1)*2, FLAGS.input_size-1)
+    rawY2 = utils.spectrum_tool.librosa_istft(
+        raw_spec2[i].T, (FLAGS.input_size-1)*2, FLAGS.input_size-1)
+    rawCONY = np.concatenate([rawY1, rawY2])
+    wavefile = wave.open(
+        decode_ans_dir+('/raw_audio_%03d.wav' % i), 'wb')
+    nframes = len(rawCONY)
+    wavefile.setparams((nchannels, sampwidth, framerate, nframes,
+                        comptype, compname))
+    wavefile.writeframes(
+        np.array(rawCONY, dtype=np.int16))
+
+    # wave picture
+    utils.spectrum_tool.picture_wave(reCONY,
+                                     decode_ans_dir +
+                                     ('/restore_wav_%03d' % i),
+                                     16000)
+    utils.spectrum_tool.picture_wave(rawCONY,
+                                     decode_ans_dir +
+                                     ('/raw_wav_%03d' % i),
+                                     16000)
+
   tf.logging.info("Done decoding.")
   sess.close()
   ''''''
@@ -152,7 +165,7 @@ def train_one_epoch(sess, coord, tr_model, data):
                                   tr_model.lengths: lengths})
     tr_loss += loss
     # print('train %d loss %lf' % (i+1, loss/(e_site-s_site)))
-    if (i+1) % 100 == 0:
+    if (i+1) % int(100*128/FLAGS.batch_size) == 0:
       lr = sess.run(tr_model.lr)
       print("MINIBATCH %d: TRAIN AVG.LOSS %f, "
             "(learning rate %e)" % (
@@ -406,7 +419,7 @@ if __name__ == "__main__":
   parser.add_argument(
       '--max_epochs',
       type=int,
-      default=50,
+      default=13,
       help="Max number of epochs to run trainer totally."
   )
   parser.add_argument(
