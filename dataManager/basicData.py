@@ -7,7 +7,6 @@ import scipy.io
 from logger.log import LOGGER
 
 
-
 class IndexableData(object):
   __metaclass__ = ABCMeta
 
@@ -91,7 +90,8 @@ class SET:
     self.X = Data(data_index_list, itemgetor_list[0])
     self.Y = Data(data_index_list, itemgetor_list[1])
     self.X_Y = Data(data_index_list, itemgetor_list[2])
-    self.X_Theta = Data(data_index_list,itemgetor_list[3])
+    self.X_Theta = Data(data_index_list, itemgetor_list[3])
+    self.index_list = data_index_list
 
 
 # region API
