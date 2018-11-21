@@ -54,8 +54,8 @@ class SimpleBasicModel(object):
       x_len = len(data)
       total_batch = x_len//batch_size if (x_len % batch_size == 0) else ((
           x_len//batch_size)+1)
+      batch100_begin_time = time.time()
       for i in range(total_batch):
-        batch_begin_time = time.time()
         s_site = i*batch_size
         e_site = min(s_site+batch_size, x_len)
         x_y = data[s_site:e_site]
@@ -66,12 +66,14 @@ class SimpleBasicModel(object):
                                      feed_dict={self.graph_node_dict[self.x_ph_nodeid]: x_batch,
                                                 self.graph_node_dict[self.y_ph_nodeid]: y_batch})
         avg_lost += float(loss_t)
-        batch_cost_time = time.time()-batch_begin_time
-        if verbose:
+        tr_loss = avg_lost / (i*batch_size+e_site-s_site)
+        if verbose and (i % 100 == 0):
+          batch_cost_time = time.time()-batch100_begin_time
+          batch100_begin_time=time.time()
           loggerbatch.print_save(self.name+" Training : Epoch"+' %04d' %
-                                 (i_epoch+1)+", batch %04d Lost " % (i+1) + '%02.9lf' % loss_t+' Cost time : ' + '%02.2lf' % batch_cost_time+'S')
+                                 (i_epoch+1)+", batch %04d. Average Loss: " % (i+1) + '%02.9lf' % tr_loss+' Cost time : ' + '%02.2lf' % batch_cost_time+'S')
       duration = time.time() - start_time
-      avg_lost/=total_batch
+      avg_lost /= x_len
       if verbose:
         logger.print_save(self.name+" Training : Epoch"+' %04d' %
                           (i_epoch+1)+" Lost "+'%02.9lf' % avg_lost+' Cost time : ' + '%02.2lf' % duration+'S')
@@ -94,16 +96,16 @@ class SimpleBasicModel(object):
     x_len = len(data)
     total_batch = x_len//batch_size if (x_len % batch_size == 0) else ((
         x_len//batch_size)+1)
-    mse_list=[]
+    mse_list = []
     for i in range(total_batch):
       s_site = i*batch_size
       e_site = min(s_site+batch_size, x_len)
-      x_y=data[s_site:e_site]
-      x=x_y[0]
-      y=x_y[1]
+      x_y = data[s_site:e_site]
+      x = x_y[0]
+      y = x_y[1]
       y_out = self.predict(x)
-      mse=np.mean((y-y_out)**2)
-      logger.print_save('Batch %04d MSE : %lf' % (i,mse))
+      mse = np.mean((y-y_out)**2)
+      logger.print_save('Batch %04d MSE : %lf' % (i, mse))
       mse_list.append(mse)
     logger.print_save('Average Test MSE : %lf' % np.mean(mse_list))
 
