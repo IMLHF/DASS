@@ -5,8 +5,12 @@ import numpy as np
 from losses import loss
 from abc import abstractmethod, ABCMeta
 import matplotlib.pyplot as plt
+import os
 
 def picture_spec(spec,name):
+  dir_=name[:name.rfind('/')]
+  if not os.path.exists(dir_):
+    os.makedirs(dir_)
   for i in range(np.shape(spec)[0]):
     spec_t=spec[i]
     plt.pcolormesh(spec_t,)
@@ -24,19 +28,18 @@ def run_uttPIT():
 
   pit_model = DEEP_SPEECH_SEPARTION(layers_size=[257, 2048, 2048, 2048, 514],
                                     times_width=[7, 1, 1, 1],
-                                    loss_fun=loss.utt_PIT_MSE_for_CNN,
-                                    learning_rate=0.01,
+                                    loss_fun=loss.utt_PIT_MSE_for_CNN_v2,
+                                    learning_rate=0.001,
                                     gpu_list=[0],
                                     name='uttPIT')
-  pit_model.train(data_mixed.train.X_Y, batch_size=128,epoch=6)
+  pit_model.train(data_mixed.train.X_Y, batch_size=128,epoch=10)
   pit_model.test_PIT(data_mixed.test_cc.X_Y,batch_size=128)
   pit_model.save_model()
   test_x=data_mixed.test_cc.X_Y[:10]
-  picture_spec(test_x[0]*8-3,'_log/models/uttPIT/saved_model/mix_speech')
-  picture_spec(test_x[1]*8-3,'_log/models/uttPIT/saved_model/clean')
+  picture_spec(mixed_aishell.rmNormalization(test_x[0]),'_log/models/uttPIT/saved_model/mix_speech')
+  picture_spec(mixed_aishell.rmNormalization(test_x[1]),'_log/models/uttPIT/saved_model/clean')
   pre=pit_model.predict(test_x)
-  pre=(pre*8-3)
-  picture_spec(pre,'_log/models/uttPIT/saved_model/reco_clean')
+  picture_spec(mixed_aishell.rmNormalization(pre),'_log/models/uttPIT/saved_model/reco_clean')
   del pit_model
 
 
