@@ -3,8 +3,12 @@ import tensorflow as tf
 import numpy as np
 from abc import abstractmethod, ABCMeta
 import matplotlib.pyplot as plt
+import os
 
 def picture_spec(spec,name):
+  dir_=name[:name.rfind('/')]
+  if not os.path.exists(dir_):
+    os.makedirs(dir_)
   for i in range(np.shape(spec)[0]):
     spec_t=spec[i]
     plt.pcolormesh(spec_t,)
