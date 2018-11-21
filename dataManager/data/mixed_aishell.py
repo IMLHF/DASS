@@ -50,7 +50,9 @@ def _mix_wav(waveData1, waveData2):
   return mixedData
 
 def rmNormalization(tmp):
-  return (10**(tmp*(LOG_NORM_MAX-LOG_NORM_MIN)+LOG_NORM_MIN))-0.5
+  tmp=(10**(tmp*(LOG_NORM_MAX-LOG_NORM_MIN)+LOG_NORM_MIN))-0.5
+  ans=np.where(tmp>0,tmp,0) # 防止计算误差导致的反归一化结果为负数
+  return ans
 
 def _extract_norm_log_mag_spec(data):
   # 归一化的幅度谱对数
@@ -215,7 +217,7 @@ def read_data_sets(rawdata):
   itemgetor_list = [_extract_feature_x,
                     _extract_feature_y,
                     _extract_feature_x_y,
-                    _extract_x_theta]
+                    _extract_x_theta,]
   data = DATABASE(set_dict, itemgetor_list)
   data.train
   return data
