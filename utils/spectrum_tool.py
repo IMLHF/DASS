@@ -3,6 +3,7 @@ import scipy
 import scipy.signal
 import librosa
 import matplotlib.pyplot as plt
+plt.switch_backend('agg')
 
 
 def picture_spec(spec,name):
@@ -12,9 +13,23 @@ def picture_spec(spec,name):
     plt.title('STFT Magnitude')
     plt.xlabel('Frequency')
     plt.ylabel('Time')
-    plt.savefig(name+str(i)+".jpg")
-    print("write pic "+name+str(i))
+    plt.savefig(name+("%03d.jpg" % i))
+    print("write pic "+name+("%03d" % i))
     # plt.show()
+    plt.close()
+
+def picture_wave(wave_t,name,framerate):
+  nframes=np.shape(wave_t)[0]
+  _time = np.arange(0, nframes)*(1.0 / framerate)
+  plt.plot(_time, wave_t)
+  plt.xlabel("Time(s)")
+  plt.ylabel("Amplitude")
+  plt.title("Single channel wavedata")
+  plt.grid(True)
+  plt.savefig(name+".jpg")
+  # plt.show()
+  print("write pic "+name)
+  plt.close()
 
 def magnitude_spectrum_sci_stft(signal, fs, NFFT=512, overlap=256):
   f, t, mag_frames = np.absolute(scipy.signal.stft(signal,
