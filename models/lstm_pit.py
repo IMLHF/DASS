@@ -165,7 +165,7 @@ class LSTM(object):
                            + tf.reduce_sum(tf.pow(self._cleaned2-self._labels2, 2), 1), 1)
     cost2 = tf.reduce_mean(tf.reduce_sum(tf.pow(self._cleaned2-self._labels1, 2), 1)
                            + tf.reduce_sum(tf.pow(self._cleaned1-self._labels2, 2), 1), 1)
-    self.costshape=tf.shape(cost1)
+    # self.costshape=tf.shape(cost1)
 
     idx = tf.cast(cost1 > cost2, tf.float32)
     self._loss = tf.reduce_sum(idx*cost2+(1-idx)*cost1)
