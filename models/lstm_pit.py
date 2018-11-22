@@ -19,6 +19,7 @@ import time
 import tensorflow as tf
 from tensorflow.contrib.rnn.python.ops import rnn
 import numpy as np
+from losses.loss import utt_PIT_MSE_for_LSTM
 
 
 class LSTM(object):
@@ -48,16 +49,20 @@ class LSTM(object):
     # self._labels2 = tf.slice(labels, [0, 0, config.output_size], [-1, -1, -1])
     # self._lengths = lengths
     with tf.name_scope('placeholder'):
-      self._inputs=tf.placeholder(tf.float32,[None,None,config.input_size],name='inputs')
-      self._mixed=self._inputs
+      self._inputs = tf.placeholder(
+          tf.float32, [None, None, config.input_size], name='inputs')
+      self._mixed = self._inputs
 
-      self._labels=tf.placeholder(tf.float32,[None,None,config.output_size*2],name='labels')
-      self._labels1=tf.slice(self._labels, [0, 0, 0], [-1, -1, config.output_size])
-      self._labels2=tf.slice(self._labels, [0, 0, config.output_size], [-1, -1, -1])
+      self._labels = tf.placeholder(
+          tf.float32, [None, None, config.output_size*2], name='labels')
+      self._labels1 = tf.slice(
+          self._labels, [0, 0, 0], [-1, -1, config.output_size])
+      self._labels2 = tf.slice(
+          self._labels, [0, 0, config.output_size], [-1, -1, -1])
 
-      self._lengths=tf.placeholder(tf.float32,[None],name='lengths')
+      self._lengths = tf.placeholder(tf.float32, [None], name='lengths')
 
-      self.batch_size=tf.shape(self._inputs)[0]
+      self.batch_size = tf.shape(self._inputs)[0]
 
       self._model_type = config.model_type
 
@@ -151,15 +156,10 @@ class LSTM(object):
     if infer:
       return
 
-    # Compute loss(Mse)
-    cost1 = tf.reduce_mean(tf.reduce_sum(tf.pow(self._cleaned1-self._labels1, 2), 1)
-                           + tf.reduce_sum(tf.pow(self._cleaned2-self._labels2, 2), 1), 1)
-    cost2 = tf.reduce_mean(tf.reduce_sum(tf.pow(self._cleaned2-self._labels1, 2), 1)
-                           + tf.reduce_sum(tf.pow(self._cleaned1-self._labels2, 2), 1), 1)
-    # self.costshape=tf.shape(cost1)
-
-    idx = tf.cast(cost1 > cost2, tf.float32)
-    self._loss = tf.reduce_sum(idx*cost2+(1-idx)*cost1)
+    self._loss = utt_PIT_MSE_for_LSTM(self._cleaned1,
+                                      self._cleaned2,
+                                      self._labels1,
+                                      self._labels2)
     if tf.get_variable_scope().reuse:
       return
 
@@ -243,9 +243,9 @@ class LSTM(object):
     x2 = tf.reshape(x2, [1, row, col])
     return x1, x2
 
+
 def _unpack_cell(cell):
   if isinstance(cell, tf.contrib.rnn.MultiRNNCell):
     return cell._cells
   else:
     return [cell]
-

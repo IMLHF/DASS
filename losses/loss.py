@@ -28,6 +28,14 @@ def utt_PIT_MSE_for_CNN_v2(y1, y2):
   loss = tf.reduce_sum(idx*cost2+(1-idx)*cost1)
   return loss
 
+def utt_PIT_MSE_for_LSTM(cleaned1,cleaned2,labels1,labels2):
+    cost1 = tf.reduce_mean(tf.reduce_sum(tf.pow(cleaned1-labels1, 2), 1)
+                           + tf.reduce_sum(tf.pow(cleaned2-labels2, 2), 1), 1)
+    cost2 = tf.reduce_mean(tf.reduce_sum(tf.pow(cleaned2-labels1, 2), 1)
+                           + tf.reduce_sum(tf.pow(cleaned1-labels2, 2), 1), 1)
+    idx = tf.cast(cost1 > cost2, tf.float32)
+    return tf.reduce_sum(idx*cost2+(1-idx)*cost1)
+
 
 def frame_PIT_MSE_for_CNN(y1, y2):
   # for i in range(tf.shape(y1)[0]):
