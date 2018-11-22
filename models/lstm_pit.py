@@ -75,9 +75,6 @@ class LSTM(object):
       outputs = tf.reshape(
           outputs, [self.batch_size, -1, config.rnn_size])
 
-    # Configure the LSTM or BLSTM model
-    # For BLSTM, we use the BasicLSTMCell.For LSTM, we use LSTMCell.
-    # You can change them and test the performance...
     def lstm_cell():
       return tf.contrib.rnn.LSTMCell(
           config.rnn_size, forget_bias=1.0, use_peepholes=True,
@@ -119,8 +116,6 @@ class LSTM(object):
             initial_state=self.initial_state)
         self._final_state = state
 
-    # Feed forward layer. Transform the RNN output to the right output size
-
     with tf.variable_scope('forward2'):
       if self._model_type.lower() == 'blstm':
         outputs = tf.reshape(outputs, [-1, 2*config.rnn_size])
@@ -128,10 +123,6 @@ class LSTM(object):
       else:
         outputs = tf.reshape(outputs, [-1, config.rnn_size])
         in_size = config.rnn_size
-      #w1,b1 =self. _weight_and_bias("L_1",in_size,256)
-      #outputs1 = tf.nn.relu(tf.matmul(outputs,w1)+b1)
-      #w2,b2 = self._weight_and_bias("L_2",256,256)
-      #outputs2 = tf.nn.relu(tf.matmul(outputs1,w2)+b2+outputs1)
       out_size = config.output_size
       # in_size=256
       weights1 = tf.get_variable('weights1', [in_size, out_size],
