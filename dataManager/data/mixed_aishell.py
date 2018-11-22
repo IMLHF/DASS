@@ -18,6 +18,7 @@ NFFT = 512
 OVERLAP = 256
 FS = 16000
 LEN_WAWE_PAD_TO = 160000
+WAVE_CMVN=True
 # endregion
 
 
@@ -34,6 +35,10 @@ def _get_waveData1__waveData2(file1, file2):
     waveData1=np.tile(waveData1,2)
   while len(waveData2)<LEN_WAWE_PAD_TO:
     waveData2=np.tile(waveData2,2)
+
+  if WAVE_CMVN:
+    waveData1=waveData1/np.max(np.abs(waveData1)) * 32767
+    waveData2=waveData2/np.max(np.abs(waveData2)) * 32767
   # if len(waveData1) < len(waveData2):
   #   waveData1, waveData2 = waveData2, waveData1
   # # print(np.shape(waveData1))
@@ -202,7 +207,7 @@ def _init_data__(rawdata, data_dict_dir, logger):
 
 
 # API
-def read_data_sets(rawdata):
+def read_data_sets(rawdata,wave_cmvn=False):
 
   DATA_DICT_DIR = '_data/' + FILE_NAME  # 数据字典的位置
   _init_data__(rawdata, DATA_DICT_DIR, DATABASE.get_logger())
