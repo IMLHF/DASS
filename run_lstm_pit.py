@@ -32,9 +32,6 @@ FLAGS = None
 def decode():
   """Decoding the inputs using current model."""
 
-  speech_num = 10
-  # speech_start = 100000  # same gender
-  speech_start = 100123 # differ gender
   # data_dir = '/home/student/work/pit_test/data_small'
   # data_dir = '/mnt/d/tf_recipe/PIT_SYS/utterance_test/speaker_set'
   data_dir = '/mnt/d/tf_recipe/ALL_DATA/aishell/mixed_data_small'
@@ -59,11 +56,22 @@ def decode():
       tf.logging.fatal("checkpoint not found.")
       sys.exit(-1)
 
-  test_cc_X_Y = data_mixed.train.X_Y[speech_start:speech_start+speech_num]
+  speech_num = 10
+
+  # speech_start = 100000  # same gender
+  # speech_start = 100123 # differ gender
+  # speech_start = 202810 # differ gender like norm
+  # dataset=data_mixed.train
+  # X_Y_batch = dataset.X_Y[speech_start:speech_start+speech_num]
+
+  speech_start = 3128  # test_cc
+  dataset = data_mixed.test_cc
+  X_Y_batch = dataset.X_Y[speech_start:speech_start+speech_num]
+
   angle_batch = np.array(
-      data_mixed.train.X_Theta[speech_start:speech_start+speech_num])
-  x_batch = test_cc_X_Y[0]
-  y_batch = test_cc_X_Y[1]
+      dataset.X_Theta[speech_start:speech_start+speech_num])
+  x_batch = X_Y_batch[0]
+  y_batch = X_Y_batch[1]
   lengths = np.array([np.shape(x_batch)[1]]*np.shape(x_batch)[0])
   cleaned1, cleaned2 = sess.run(
       [model.cleaned1, model.cleaned2],
@@ -181,7 +189,7 @@ def train_one_epoch(sess, coord, tr_model, data):
                                   tr_model.lengths: lengths})
     tr_loss += loss
     # print('train %d loss %lf' % (i+1, loss/(e_site-s_site)))
-    if (i+1) % int(100*128/FLAGS.batch_size) == 0:
+    if (i+1) % int(100*256/FLAGS.batch_size) == 0:
       lr = sess.run(tr_model.lr)
       print("MINIBATCH %d: TRAIN AVG.LOSS %f, "
             "(learning rate %e)" % (
@@ -222,8 +230,8 @@ def eval_one_epoch(sess, coord, val_model, data):
 
 def train():
 
-  # data_dir = '/home/student/work/pit_test/data_small'
-  data_dir = '/mnt/d/tf_recipe/PIT_SYS/utterance_test/speaker_set'
+  data_dir = '/home/student/work/pit_test/data_small'
+  # data_dir = '/mnt/d/tf_recipe/PIT_SYS/utterance_test/speaker_set'
   data_mixed = mixed_aishell.read_data_sets(data_dir)
 
   g = tf.Graph()
@@ -256,14 +264,6 @@ def train():
     threads = tf.train.start_queue_runners(sess=sess, coord=coord)
     # g.finalize()
 
-    # train_X_Y = data_mixed.train.X_Y
-    # lengths = np.array([np.shape(train_X_Y[:10][0])[1]]
-    #                    * np.shape(train_X_Y[:10][0])[0])
-    # print(sess.run(val_model.costshape,
-    #                feed_dict={val_model.inputs: train_X_Y[:10][0],
-    #                           val_model.labels: train_X_Y[:10][1],
-    #                           val_model.lengths: lengths}))
-    # exit(0)
     try:
       # Cross validation before training.
       loss_prev = eval_one_epoch(
@@ -297,7 +297,7 @@ def train():
           os.makedirs(ckpt_dir)
         ckpt_path = os.path.join(ckpt_dir, ckpt_name)
         # Relative loss between previous and current val_loss
-        rel_impr = tf.abs(loss_prev - val_loss) / loss_prev
+        rel_impr = np.abs(loss_prev - val_loss) / loss_prev
         # Accept or reject new parameters
         if val_loss < loss_prev:
           tr_model.saver.save(sess, ckpt_path)
@@ -305,7 +305,7 @@ def train():
           loss_prev = val_loss
           best_path = ckpt_path
           tf.logging.info(
-              "ITERATION %d: TRAIN AVG.LOSS %.4f, (lrate%e) CROSSVAL"
+              "ITERATION %03d: TRAIN AVG.LOSS %.4f, (lrate%e) CROSSVAL"
               " AVG.LOSS %.4f, %s (%s), TIME USED: %.2fs" % (
                   epoch + 1, tr_loss, FLAGS.learning_rate, val_loss,
                   "nnet accepted", ckpt_name,
@@ -313,7 +313,7 @@ def train():
         else:
           tr_model.saver.restore(sess, best_path)
           tf.logging.info(
-              "ITERATION %d: TRAIN AVG.LOSS %.4f, (lrate%e) CROSSVAL"
+              "ITERATION %03d: TRAIN AVG.LOSS %.4f, (lrate%e) CROSSVAL"
               " AVG.LOSS %.4f, %s, (%s), TIME USED: %.2fs" % (
                   epoch + 1, tr_loss, FLAGS.learning_rate, val_loss,
                   "nnet rejected", ckpt_name,
@@ -434,13 +434,13 @@ if __name__ == "__main__":
       help="Initial learning rate."
   )
   parser.add_argument(
-      '--min_epoches',
+      '--min_epochs',
       type=int,
       default=min_epoches,
       help="Min number of epochs to run trainer without halving."
   )
   parser.add_argument(
-      '--max_epoches',
+      '--max_epochs',
       type=int,
       default=max_epoches,
       help="Max number of epochs to run trainer totally."
