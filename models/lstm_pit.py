@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-# Copyright 2017  Sining Sun (Northwestern Polytechnical University, China)
-#                 Jiaqiang Liu (Northwestern Polytechnical University, China)
-
 """
     Build the LSTM(BLSTM)  neural networks for PIT speech separation.
 
