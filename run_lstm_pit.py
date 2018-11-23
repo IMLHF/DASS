@@ -33,10 +33,11 @@ def decode():
   """Decoding the inputs using current model."""
 
   speech_num = 10
-  speech_start = 100000
-  data_dir = '/home/student/work/pit_test/data_small'
+  # speech_start = 100000  # same gender
+  speech_start = 100123 # differ gender
+  # data_dir = '/home/student/work/pit_test/data_small'
   # data_dir = '/mnt/d/tf_recipe/PIT_SYS/utterance_test/speaker_set'
-  # data_dir = '/mnt/d/tf_recipe/ALL_DATA/aishell/mixed_data_small'
+  data_dir = '/mnt/d/tf_recipe/ALL_DATA/aishell/mixed_data_small'
   data_mixed = mixed_aishell.read_data_sets(data_dir)
 
   with tf.Graph().as_default():
@@ -78,6 +79,7 @@ def decode():
   cleaned2 = np.array(mixed_aishell.rmNormalization(cleaned2))
   raw_spec1 = np.array(mixed_aishell.rmNormalization(raw_spec1))
   raw_spec2 = np.array(mixed_aishell.rmNormalization(raw_spec2))
+  mixed_spec2 = np.array(mixed_aishell.rmNormalization(x_batch))
 
   decode_ans_dir = os.path.join(FLAGS.save_dir, 'decode_ans')
   if os.path.exists(decode_ans_dir):
@@ -96,8 +98,10 @@ def decode():
   spec2 = cleaned2 * np.exp(angle_batch*1j)
   raw_spec1 = raw_spec1 * np.exp(angle_batch*1j)
   raw_spec2 = raw_spec2 * np.exp(angle_batch*1j)
+  mixed_spec2 = mixed_spec2 * np.exp(angle_batch*1j)
 
   for i in range(speech_num):
+    # write restore wave
     reY1 = utils.spectrum_tool.librosa_istft(
         spec1[i].T, (FLAGS.input_size-1)*2, FLAGS.input_size-1)
     reY2 = utils.spectrum_tool.librosa_istft(
@@ -116,6 +120,7 @@ def decode():
     wavefile.writeframes(
         np.array(reCONY, dtype=np.int16))
 
+    # write raw wave
     rawY1 = utils.spectrum_tool.librosa_istft(
         raw_spec1[i].T, (FLAGS.input_size-1)*2, FLAGS.input_size-1)
     rawY2 = utils.spectrum_tool.librosa_istft(
@@ -128,6 +133,17 @@ def decode():
                         comptype, compname))
     wavefile.writeframes(
         np.array(rawCONY, dtype=np.int16))
+
+    # write mixed wave
+    mixedWave = utils.spectrum_tool.librosa_istft(
+        mixed_spec2[i].T, (FLAGS.input_size-1)*2, FLAGS.input_size-1)
+    wavefile = wave.open(
+        decode_ans_dir+('/mixed_audio_%03d.wav' % i), 'wb')
+    nframes = len(mixedWave)
+    wavefile.setparams((nchannels, sampwidth, framerate, nframes,
+                        comptype, compname))
+    wavefile.writeframes(
+        np.array(mixedWave, dtype=np.int16))
 
     # wave picture
     utils.spectrum_tool.picture_wave(reCONY,
@@ -281,7 +297,7 @@ def train():
           os.makedirs(ckpt_dir)
         ckpt_path = os.path.join(ckpt_dir, ckpt_name)
         # Relative loss between previous and current val_loss
-        rel_impr = (loss_prev - val_loss) / loss_prev
+        rel_impr = tf.abs(loss_prev - val_loss) / loss_prev
         # Accept or reject new parameters
         if val_loss < loss_prev:
           tr_model.saver.save(sess, ckpt_path)
@@ -340,19 +356,39 @@ def main(_):
 
 
 if __name__ == "__main__":
+  # default param
+  ifdecode = 0
+  decode_show_spec = 1
+  resume_training = 'false'
+  input_size = 257
+  output_size = 257  # per speaker
+  rnn_size = 496
+  rnn_num_layers = 2
+  batch_size = 128
+  learning_rate = 0.001
+  min_epoches = 10
+  max_epoches = 50
+  halving_factor = 0.5
+  start_halving_impr = 0.003
+  end_halving_impr = 0.001
+  save_dir = 'exp/lstm_pit'
+  keep_prob = 0.8
+  max_grad_norm = 5.0
+  model_type = 'LSTM'
+
   tf.logging.set_verbosity(tf.logging.INFO)
   parser = argparse.ArgumentParser()
   parser.add_argument(
       '--decode',
       type=int,
-      default=0,
+      default=ifdecode,
       # action='store_true',
       help="Flag indicating decoding or training."
   )
   parser.add_argument(
       '--decode_show_spec',
       type=int,
-      default=1,
+      default=decode_show_spec,
       help="Flag indicating show spectrum or not."
   )
   parser.add_argument(
@@ -361,83 +397,70 @@ if __name__ == "__main__":
       default='False',
       help="Flag indicating whether to resume training from cptk."
   )
-  # parser.add_argument(
-  #     '--lists_dir',
-  #     type=str,
-  #     default='list',
-  #     help="Directory to load train, val and test data."
-  # )
   parser.add_argument(
       '--input_size',
       type=int,
-      default=257,
+      default=input_size,
       help="The dimension of input."
   )
   parser.add_argument(
       '--output_size',
       type=int,
-      default=257,
+      default=output_size,
       help="The dimension of output."
   )
-  # parser.add_argument(
-  #     '--czt_dim',
-  #     type=int,
-  #     default=0,
-  #     help="chrip-z transform feats dimension. it should be 0 if you just use fft spectrum feats"
-  # )
-
   parser.add_argument(
       '--rnn_size',
       type=int,
-      default=496,
+      default=rnn_size,
       help="Number of rnn units to use."
   )
   parser.add_argument(
       '--rnn_num_layers',
       type=int,
-      default=2,
+      default=rnn_num_layers,
       help="Number of layer of rnn model."
   )
   parser.add_argument(
       '--batch_size',
       type=int,
-      default=128,
+      default=batch_size,
       help="Mini-batch size."
   )
   parser.add_argument(
       '--learning_rate',
       type=float,
-      default=0.001,
+      default=learning_rate,
       help="Initial learning rate."
   )
   parser.add_argument(
-      '--min_epochs',
+      '--min_epoches',
       type=int,
-      default=10,
+      default=min_epoches,
       help="Min number of epochs to run trainer without halving."
   )
   parser.add_argument(
-      '--max_epochs',
+      '--max_epoches',
       type=int,
-      default=13,
+      default=max_epoches,
       help="Max number of epochs to run trainer totally."
   )
   parser.add_argument(
       '--halving_factor',
       type=float,
-      default=0.5,
+      default=halving_factor,
       help="Factor for halving."
   )
   parser.add_argument(
       '--start_halving_impr',
       type=float,
-      default=0.003,
+      default=start_halving_impr,
       help="Halving when ralative loss is lower than start_halving_impr."
   )
   parser.add_argument(
       '--end_halving_impr',
       type=float,
-      default=0.001,
+      default=end_halving_impr,
       help="Stop when relative loss is lower than end_halving_impr."
   )
   # parser.add_argument(
@@ -449,33 +472,27 @@ if __name__ == "__main__":
   parser.add_argument(
       '--save_dir',
       type=str,
-      default='exp/lstm_pit',
+      default=save_dir,
       help="Directory to put the train result."
   )
   parser.add_argument(
       '--keep_prob',
       type=float,
-      default=0.8,
+      default=keep_prob,
       help="Keep probability for training dropout."
   )
   parser.add_argument(
       '--max_grad_norm',
       type=float,
-      default=5.0,
+      default=max_grad_norm,
       help="The max gradient normalization."
   )
   parser.add_argument(
-      '--assign',
-      type=str,
-      default='def',
-      help="Assignment method, def or opt"
-  )
-  parser.add_argument(
       '--model_type',
-      type=str, default='LSTM',
+      type=str,
+      default=model_type,
       help="BLSTM or LSTM"
   )
   FLAGS, unparsed = parser.parse_known_args()
-  # pp.pprint(FLAGS.__dict__)
   sys.stdout.flush()
   tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
