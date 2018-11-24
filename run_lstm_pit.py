@@ -1,12 +1,7 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import argparse
 import os
 import sys
 import time
-
 import numpy as np
 import tensorflow as tf
 from models.lstm_pit import LSTM
@@ -18,8 +13,6 @@ import traceback
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 
-# from io_funcs.tfrecords_io import get_padded_batch
-# from local.utils import pp, show_all_variables
 
 FLAGS = None
 
@@ -260,7 +253,7 @@ def train():
     # g.finalize()
 
     try:
-      # Cross validation before training.
+      # validation before training.
       loss_prev = eval_one_epoch(
           sess, coord, val_model, data_mixed.test_cc.X_Y)
       tf.logging.info("CROSSVAL PRERUN AVG.LOSS %.4F" % loss_prev)
