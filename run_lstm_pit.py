@@ -259,7 +259,7 @@ def train():
       tf.logging.info("CROSSVAL PRERUN AVG.LOSS %.4F" % loss_prev)
 
       sess.run(tf.assign(tr_model.lr, FLAGS.learning_rate))
-      for epoch in range(FLAGS.max_epochs):
+      for epoch in range(FLAGS.start_epoch,FLAGS.max_epochs):
         start_time = time.time()
 
         # Training
@@ -351,9 +351,10 @@ if __name__ == "__main__":
   input_size = 257
   output_size = 257  # per speaker
   rnn_size = 496
-  rnn_num_layers = 2
-  batch_size = 128
+  rnn_num_layers = 3
+  batch_size =128
   learning_rate = 0.001
+  start_epoch = 0
   min_epoches = 10
   max_epoches = 50
   halving_factor = 0.5
@@ -362,7 +363,7 @@ if __name__ == "__main__":
   save_dir = 'exp/lstm_pit'
   keep_prob = 0.8
   max_grad_norm = 5.0
-  model_type = 'LSTM'
+  model_type = 'BLSTM'
 
   tf.logging.set_verbosity(tf.logging.INFO)
   parser = argparse.ArgumentParser()
@@ -420,6 +421,12 @@ if __name__ == "__main__":
       type=float,
       default=learning_rate,
       help="Initial learning rate."
+  )
+  parser.add_argument(
+      '--start_epoch',
+      type=int,
+      default=min_epoches,
+      help="Start number of epochs for resume trianing."
   )
   parser.add_argument(
       '--min_epochs',
