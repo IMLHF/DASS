@@ -36,31 +36,20 @@ class LSTM(object):
       infer: bool, if training(false) or test (true)
   """
 
-  def __init__(self, config, infer=False):
-    # self._inputs = inputs
-    # self._mixed = inputs
-    # self._labels1 = tf.slice(labels, [0, 0, 0], [-1, -1, config.output_size])
-    # self._labels2 = tf.slice(labels, [0, 0, config.output_size], [-1, -1, -1])
-    # self._lengths = lengths
-    with tf.name_scope('placeholder'):
-      self._inputs = tf.placeholder(
-          tf.float32, [None, None, config.input_size], name='inputs')
-      self._mixed = self._inputs
+  def __init__(self, config, inputs_batch, label1_batch, label2_batch, lengths_batch, infer=False):
+    self._inputs = inputs_batch
+    self._mixed = self._inputs
 
-      self._labels = tf.placeholder(
-          tf.float32, [None, None, config.output_size*2], name='labels')
-      self._labels1 = tf.slice(
-          self._labels, [0, 0, 0], [-1, -1, config.output_size])
-      self._labels2 = tf.slice(
-          self._labels, [0, 0, config.output_size], [-1, -1, -1])
+    self._labels1 = label1_batch
+    self._labels2 = label2_batch
 
-      self._lengths = tf.placeholder(tf.float32, [None], name='lengths')
+    self._lengths = lengths_batch
 
-      self.batch_size = tf.shape(self._inputs)[0]
+    self.batch_size = tf.shape(self._inputs)[0]
 
-      self._model_type = config.model_type
+    self._model_type = config.model_type
 
-      outputs = self._inputs
+    outputs = self._inputs
     # This first layer-- feed forward layer
     # Transform the input to the right size before feed into RNN
 
@@ -99,7 +88,7 @@ class LSTM(object):
             cells_bw=lstm_bw_cell,
             inputs=outputs,
             dtype=tf.float32,
-            sequence_length=tf.cast(self._lengths,tf.int32))
+            sequence_length=self._lengths)
         outputs, fw_final_states, bw_final_states = result
     if config.model_type.lower() == 'lstm':
       with tf.variable_scope('lstm'):
@@ -111,7 +100,7 @@ class LSTM(object):
         outputs, state = tf.nn.dynamic_rnn(
             cell, outputs,
             dtype=tf.float32,
-            sequence_length=self._lengths,
+            sequence_length=tf.cast(self._lengths,tf.int32),
             initial_state=self.initial_state)
         self._final_state = state
 
@@ -186,7 +175,7 @@ class LSTM(object):
 
   @property
   def labels(self):
-    return self._labels
+    return self._labels1, self._labels2
 
   @property
   def lengths(self):
