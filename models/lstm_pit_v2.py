@@ -18,8 +18,6 @@ from losses.loss import utt_PIT_MSE_for_LSTM
 
 class LSTM(object):
   """Build BLSTM or LSTM model with PIT loss functions.
-     If you use this module to train your module, make sure that
-     your prepare the right format data!
 
   Attributes:
       config: Used to config our model
@@ -29,10 +27,10 @@ class LSTM(object):
               config.batch_size: the batch_size for training
               config.rnn_num_layers: the rnn layers numbers
               config.keep_prob: the dropout rate
-      inputs: the mixed speech feature without cmvn
-      inputs_cmvn: the mixed speech feature with cmvn as the inputs of model(LSTM or BLSTM)
-      labels1: the spk1's feature, as targets to train the model
-      labels2: the spk2's feature, as targets to train the model
+      inputs_batch: the mixed speech feature with cmvn as the inputs of model(LSTM or BLSTM)
+      labels1_batch: the spk1's feature, as targets to train the model
+      labels2_batch: the spk2's feature, as targets to train the model
+      lengths_batch: rnn sequence_lengths
       infer: bool, if training(false) or test (true)
   """
 
@@ -127,11 +125,7 @@ class LSTM(object):
           mask1, [self.batch_size, -1, config.output_size])
       self._activations2 = tf.reshape(
           mask2, [self.batch_size, -1, config.output_size])
-      # in general, config.czt_dim == 0; However, we found that if we concatenate
-      # 128 dim chrip-z transform feats to FFT feats, we got better SDR performance
-      # for the same gender case.
 
-      # so , if you don't use czt feats (just the fft feats), config.czt_dim=0
       self._cleaned1 = self._activations1*self._mixed
       self._cleaned2 = self._activations2*self._mixed
     # Ability to save the model
