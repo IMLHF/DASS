@@ -14,6 +14,7 @@ import tensorflow as tf
 from tensorflow.contrib.rnn.python.ops import rnn
 import numpy as np
 from losses.loss import utt_PIT_MSE_for_LSTM
+from FLAGS import NNET_PARAM as config
 
 
 class LSTM(object):
@@ -34,7 +35,7 @@ class LSTM(object):
       infer: bool, if training(false) or test (true)
   """
 
-  def __init__(self, config, inputs_batch, label1_batch, label2_batch, lengths_batch, infer=False):
+  def __init__(self, inputs_batch, label1_batch, label2_batch, lengths_batch, infer=False):
     self._inputs = inputs_batch
     self._mixed = self._inputs
 
