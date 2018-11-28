@@ -46,16 +46,15 @@ def decode():
 
   speech_num = 10
 
-  # speech_start = 100000  # same gender
+  speech_start = 100000  # same gender
   # speech_start = 100123 # differ gender
   # speech_start = 202810 # differ gender like norm
-  # dataset=data_mixed.train
-  # X_Y_batch = dataset.X_Y[speech_start:speech_start+speech_num]
+  dataset=data_mixed.train
 
-  speech_start = 3128  # test_cc
-  dataset = data_mixed.test_cc
+  # speech_start = 3128  # test_cc
+  # dataset = data_mixed.test_cc
+
   X_Y_batch = dataset.X_Y[speech_start:speech_start+speech_num]
-
   angle_batch = np.array(
       dataset.X_Theta[speech_start:speech_start+speech_num])
   x_batch = X_Y_batch[0]
@@ -285,6 +284,7 @@ def train():
           os.makedirs(ckpt_dir)
         ckpt_path = os.path.join(ckpt_dir, ckpt_name)
         # Relative loss between previous and current val_loss
+        rel_impr = loss_prev - val_loss / loss_prev
         rel_impr = np.abs(loss_prev - val_loss) / loss_prev
         # Accept or reject new parameters
         if val_loss < loss_prev:
@@ -351,19 +351,19 @@ if __name__ == "__main__":
   input_size = 257
   output_size = 257  # per speaker
   rnn_size = 496
-  rnn_num_layers = 3
+  rnn_num_layers = 2
   batch_size =128
   learning_rate = 0.001
   start_epoch = 0
   min_epoches = 10
   max_epoches = 50
-  halving_factor = 0.5
+  halving_factor = 0.7
   start_halving_impr = 0.003
   end_halving_impr = 0.001
   save_dir = 'exp/lstm_pit'
   keep_prob = 0.8
   max_grad_norm = 5.0
-  model_type = 'BLSTM'
+  model_type = 'LSTM'
 
   tf.logging.set_verbosity(tf.logging.INFO)
   parser = argparse.ArgumentParser()
