@@ -1,6 +1,6 @@
 """
     Build the LSTM(BLSTM)  neural networks for PIT speech separation.
-
+    for run_lstm_pit_v2.py
 """
 
 from __future__ import absolute_import
