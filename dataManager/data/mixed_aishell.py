@@ -35,6 +35,11 @@ def _get_waveData1__waveData2(file1, file2):
                             dtype=np.int16)
   f1.close()
   f2.close()
+  #!!!!! aishell dataset have zero length wave
+  if len(waveData1) == 0:
+    waveData1 = np.array([0], dtype=np.int16)
+  if len(waveData2) == 0:
+    waveData2 = np.array([0], dtype=np.int16)
   while len(waveData1) < LEN_WAWE_PAD_TO:
     waveData1 = np.tile(waveData1, 2)
   while len(waveData2) < LEN_WAWE_PAD_TO:
