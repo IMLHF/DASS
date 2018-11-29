@@ -1,4 +1,4 @@
-# use tf.Dataset IO
+# run without TFRecord, more efficient.
 import argparse
 import os
 import sys
@@ -208,8 +208,9 @@ def train():
       # region DataSet
       train_tfrecords, val_tfrecords, testcc_tfrecords = mixed_aishell_tfrecord_io.gen_tfrecord(
           # '/mnt/d/tf_recipe/ALL_DATA/aishell/mixed_data_small',
-          '/home/student/work/pit_test/data_small',
-          '/big-data/tmplhf/pit-data/feature_tfrecords_utt03s',
+          '/home/student/work/pit_test/data',
+          # 'feature_tfrecords_utt03s_test',
+          '/big-data/tmplhf/pit-data/feature_tfrecords_utt10s',
           gen=True)
       exit(0)
       # train_epoch_data_size = 405600

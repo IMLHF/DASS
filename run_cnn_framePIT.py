@@ -33,14 +33,6 @@ def run_framePIT():
                                     gpu_list=[1],
                                     name='framePIT')
   pit_model.train(data_mixed.train.X_Y, batch_size=128,epoch=6)
-  pit_model.test_PIT(data_mixed.test_cc.X_Y,batch_size=128)
-  pit_model.save_model()
-  test_x=data_mixed.test_cc.X_Y[:10]
-  picture_spec(test_x[0]*8-3,'_log/models/framePIT/saved_model/mix_speech')
-  picture_spec(test_x[1]*8-3,'_log/models/framePIT/saved_model/clean')
-  pre=pit_model.predict(test_x)
-  pre=(pre*8-3)
-  picture_spec(pre,'_log/models/framePIT/saved_model/reco_clean')
   del pit_model
 
 

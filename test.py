@@ -31,16 +31,20 @@ def tf_test():
   y1 = tf.constant([[[1, 1, 1, 0, 0, 0]], [[0, 0, 0, 1, 1, 1]]])
   y2 = tf.constant([[[1, 1, 1, 0, 0, 0]], [[1, 1, 1, 0, 0, 0]]])
   yy = tf.constant([[1, 2, 3], [4, 5, 6]])
+  speakerid = tf.random_uniform([2], maxval=3, dtype=tf.int32)
+  speaker1id=speakerid[0]
+  speaker2id=speakerid[1]
 
   with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
-    print(sess.run(tf.get_collection('v')))
-    tf.Graph.clear_collection(tf.get_default_graph(), name='v')
-    print(sess.run(tf.get_collection('v')))
+    # print(sess.run(tf.get_collection('v')))
+    # tf.Graph.clear_collection(tf.get_default_graph(), name='v')
+    # print(sess.run(tf.get_collection('v')))
     # a, b = tf.split(v1, 2, axis=-1)
     # print(np.shape(sess.run(a)))
     # print(sess.run(loss.PIT_MSE_for_CNN(y1, y2)))
     # print(sess.run(tf.reduce_mean(yy,[0,1])))
+    print(sess.run([speaker1id,speaker2id]))
 
 
 def angle_test():
@@ -142,6 +146,6 @@ def wave_restore_use_data_manager_test():
 
 if __name__ == "__main__":
   # data_manager_test()
-  # tf_test()
+  tf_test()
   # wave_restore_from_mag_spec()
-  wave_restore_use_data_manager_test()
+  # wave_restore_use_data_manager_test()

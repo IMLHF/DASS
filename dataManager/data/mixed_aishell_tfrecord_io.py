@@ -6,7 +6,9 @@ import shutil
 import time
 from . import mixed_aishell
 import multiprocessing
-import FLAGS
+import copy
+import scipy.io
+from FLAGS import NNET_PARAM
 
 
 def _bytes_feature(value):
@@ -23,11 +25,11 @@ def _float_feature(value):
 
 def parse_func(example_proto):
   sequence_features = {
-      'inputs': tf.FixedLenSequenceFeature(shape=[FLAGS.input_size],
+      'inputs': tf.FixedLenSequenceFeature(shape=[NNET_PARAM.input_size],
                                            dtype=tf.float32),
-      'labels1': tf.FixedLenSequenceFeature(shape=[FLAGS.output_size],
+      'labels1': tf.FixedLenSequenceFeature(shape=[NNET_PARAM.output_size],
                                             dtype=tf.float32),
-      'labels2': tf.FixedLenSequenceFeature(shape=[FLAGS.output_size],
+      'labels2': tf.FixedLenSequenceFeature(shape=[NNET_PARAM.output_size],
                                             dtype=tf.float32), }
   _, sequence = tf.parse_single_sequence_example(
       example_proto, sequence_features=sequence_features)
@@ -35,39 +37,38 @@ def parse_func(example_proto):
   return sequence['inputs'], sequence['labels1'], sequence['labels2'], length
 
 
-def gen_single_tfrecord(i, index_name, dataset, dataset_dir):
-  uttname1, uttname2 = str(index_name).split(' ')
-  uttname1 = uttname1[uttname1.rfind('/')+1:uttname1.rfind('.')]
-  uttname2 = uttname2[uttname2.rfind('/')+1:uttname2.rfind('.')]
-  index_name = 'MIX'.join([uttname1, uttname2])
-  X_Y = dataset.X_Y[i]
-  X = np.reshape(np.array(X_Y[0], dtype=np.float32),
-                 newshape=[-1, FLAGS.input_size])
-  Y = np.reshape(np.array(X_Y[1], dtype=np.float32),
-                 newshape=[-1, FLAGS.output_size*2])
-  Y1 = Y[:, :FLAGS.output_size]
-  Y2 = Y[:, FLAGS.output_size:]
-  input_features = [
-      tf.train.Feature(float_list=tf.train.FloatList(value=input_))
-      for input_ in X]
-  label_features1 = [
-      tf.train.Feature(float_list=tf.train.FloatList(value=label))
-      for label in Y1]
-  label_features2 = [
-      tf.train.Feature(float_list=tf.train.FloatList(value=label))
-      for label in Y2]
-  feature_list = {
-      'inputs': tf.train.FeatureList(feature=input_features),
-      'labels1': tf.train.FeatureList(feature=label_features1),
-      'labels2': tf.train.FeatureList(feature=label_features2),
-  }
-  feature_lists = tf.train.FeatureLists(feature_list=feature_list)
-  record = tf.train.SequenceExample(feature_lists=feature_lists)
-  writer = tf.python_io.TFRecordWriter(os.path.join(
-      dataset_dir, ('%08d.tfrecords' % i)))
-  writer.write(record.SerializeToString())
-  writer.close()
-  # print(dataset_dir + ('/%08d.tfrecords' % i), 'write done')
+def gen_tfrecord_minprocess(dataset,s_site,e_site, dataset_dir):
+  # for (i, index_) in enumerate(dataset_index_list):
+  for i in range(s_site,e_site):
+    X_Y=dataset.X_Y[i]
+    # X_Y = mixed_aishell._extract_feature_x_y([index_, ])
+    X = np.reshape(np.array(X_Y[0], dtype=np.float32),
+                   newshape=[-1, NNET_PARAM.input_size])
+    Y = np.reshape(np.array(X_Y[1], dtype=np.float32),
+                   newshape=[-1, NNET_PARAM.output_size*2])
+    Y1 = Y[:, :NNET_PARAM.output_size]
+    Y2 = Y[:, NNET_PARAM.output_size:]
+    input_features = [
+        tf.train.Feature(float_list=tf.train.FloatList(value=input_))
+        for input_ in X]
+    label_features1 = [
+        tf.train.Feature(float_list=tf.train.FloatList(value=label))
+        for label in Y1]
+    label_features2 = [
+        tf.train.Feature(float_list=tf.train.FloatList(value=label))
+        for label in Y2]
+    feature_list = {
+        'inputs': tf.train.FeatureList(feature=input_features),
+        'labels1': tf.train.FeatureList(feature=label_features1),
+        'labels2': tf.train.FeatureList(feature=label_features2),
+    }
+    feature_lists = tf.train.FeatureLists(feature_list=feature_list)
+    record = tf.train.SequenceExample(feature_lists=feature_lists)
+    writer = tf.python_io.TFRecordWriter(os.path.join(
+        dataset_dir, ('%08d.tfrecords' % i)))
+    writer.write(record.SerializeToString())
+    writer.close()
+    # print(dataset_dir + ('/%08d.tfrecords' % i), 'write done')
 
 
 def gen_tfrecord(data_dir, tfrecords_dir, gen=True):
@@ -92,22 +93,42 @@ def gen_tfrecord(data_dir, tfrecords_dir, gen=True):
     gen_start_time = time.time()
     for dataset_dir in dataset_dir_list:
       start_time = time.time()
-      dataset = data_mixed.train
+      # dataset_index_list = None
+      dataset = None
       if dataset_dir[-2:] == 'in':
         dataset = data_mixed.train
+        # dataset_index_list = scipy.io.loadmat(
+        #     '_data/mixed_aishell/train/mixed_wav_dir.mat')["mixed_wav_dir"]
       elif dataset_dir[-2:] == 'on':
         dataset = data_mixed.validation
+        # dataset_index_list = scipy.io.loadmat(
+        #     '_data/mixed_aishell/validation/mixed_wav_dir.mat')["mixed_wav_dir"]
       elif dataset_dir[-2:] == 'cc':
         dataset = data_mixed.test_cc
+        # dataset_index_list = scipy.io.loadmat(
+        #     '_data/mixed_aishell/test_cc/mixed_wav_dir.mat')["mixed_wav_dir"]
 
-      # pool = multiprocessing.Pool(FLAGS.num_threads_processing_data)
-      # workers = []
-      for i, index_name in enumerate(dataset.index_list):
-        # workers.append(pool.apply_async(gen_single_tfrecord,
-                                        # (i, index_name, dataset, dataset_dir)))
-        gen_single_tfrecord(i, index_name, dataset, dataset_dir)
-      # pool.close()
-      # pool.join()
+      # len_dataset = len(dataset_index_list)
+      len_dataset = len(dataset.index_list)
+      minprocess_utt_num = int(
+          len_dataset/NNET_PARAM.num_threads_processing_data)
+      pool = multiprocessing.Pool(NNET_PARAM.num_threads_processing_data)
+      for i_process in range(NNET_PARAM.num_threads_processing_data):
+        s_site = i_process*minprocess_utt_num
+        e_site = s_site+minprocess_utt_num
+        if i_process == (NNET_PARAM.num_threads_processing_data-1):
+          e_site = len_dataset
+        # print(s_site,e_site)
+        pool.apply_async(gen_tfrecord_minprocess,
+                         (copy.deepcopy(dataset),
+                          copy.deepcopy(s_site),
+                          copy.deepcopy(e_site),
+                          copy.deepcopy(dataset_dir)))
+        # gen_tfrecord_minprocess(copy.deepcopy(dataset_index_list[s_site:e_site]),
+        #                         copy.deepcopy(dataset_dir))
+      pool.close()
+      pool.join()
+
       print(dataset_dir+' set extraction over. cost time %06d' %
             (time.time()-start_time))
     print('Generate TFRecord over. cost time %06d' %

@@ -1,3 +1,4 @@
+# run without TFRecord, lower efficient.
 import argparse
 import os
 import sys
