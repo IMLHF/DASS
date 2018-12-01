@@ -168,7 +168,7 @@ def train_one_epoch(sess, tr_model):
       stime = time.time()
       print('getin')
       _, loss, current_batchsize = sess.run(
-          [tr_model.train_op, tr_model.loss, tf.shape(tr_model.lengths)[0]])
+          [tr_model.train_op, tr_model.loss, tr_model.current_batchsize])
       tr_loss += loss
       # if (i+1) % int(100*256/NNET_PARAM.batch_size) == 0:
       lr = sess.run(tr_model.lr)
@@ -191,7 +191,7 @@ def eval_one_epoch(sess, val_model):
   while True:
     try:
       loss, current_batchsize = sess.run(
-          [val_model.loss, tf.shape(val_model.lengths)[0]])
+          [val_model.loss, val_model.current_batchsize])
       val_loss += loss
       data_len += current_batchsize
     except tf.errors.OutOfRangeError:

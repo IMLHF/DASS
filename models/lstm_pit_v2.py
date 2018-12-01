@@ -48,6 +48,8 @@ class LSTM(object):
 
     self._model_type = config.model_type
 
+    self.current_batchsize = tf.shape(self._lengths)[0]
+
     outputs = self._inputs
     # This first layer-- feed forward layer
     # Transform the input to the right size before feed into RNN
